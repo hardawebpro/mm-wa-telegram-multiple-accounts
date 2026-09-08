@@ -1,0 +1,48 @@
+---
+description: Electron process boundaries, IPC conventions, and security requirements for MM WA Telegram Multiple Accounts.
+globs: "src/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Architecture and security
+
+See `about.md` § Security Requirements, § UI State, § Commercial-Ready Architecture.
+
+## Process ownership
+
+- **Main process:** window lifecycle, `WebContentsView` management, Electron sessions/partitions, IPC handlers, account/settings persistence.
+- **Renderer (React):** application UI state only — sidebar, tabs, settings panels.
+- **Preload:** narrow `contextBridge` exposure to the React renderer.
+- **Shared:** serializable types, validation schemas, status enums, error contracts.
+- Do not import Electron main-process APIs into renderer code.
+- `WebContentsView` instances must remain exclusively in the main process.
+
+## Electron baseline (app shell + messaging views)
+
+```
+nodeIntegration: false
+contextIsolation: true
+sandbox: true
+webSecurity: true
+```
+
+Never expose Node.js, filesystem access, `child_process`, raw `ipcRenderer`, or unrestricted Electron APIs to WhatsApp Web, Telegram Web, or the React renderer beyond the preload bridge.
+
+## IPC conventions
+
+- Name channels `domain:action`, for example `account:list`, `account:create`, `view:switch`, `settings:get`.
+- Define each channel once in shared contracts; do not scatter string literals.
+- Accept structured objects and return discriminated success/error results.
+- Validate IPC input at the main-process boundary (Zod recommended).
+- Never expose generic methods such as `execute`, `query`, `readFile`, `request`, or raw `ipcRenderer`.
+
+## Secrets and session data
+
+- Electron session storage manages platform session data (cookies, local storage).
+- Application config stores account metadata only — never auth tokens or cookies.
+- Never log passwords, cookies, session tokens, or complete credential payloads.
+
+## Navigation and external links
+
+- Restrict navigation and external links appropriately for messaging web views.
+- Treat all remote page content as untrusted input.

@@ -1,0 +1,71 @@
+---
+description: Tailwind CSS design system, layout, English copy, and React UI state rules for the application shell.
+globs: "src/renderer/**/*.{ts,tsx,css,html}"
+alwaysApply: false
+---
+
+# UI design system (Tailwind CSS)
+
+See `about.md` § Main Application Layout, § Sidebar, § Tabs, § Design System, § UI State.
+
+## Foundation
+
+- **Tailwind CSS** is the sole styling engine for the application shell (sidebar, tabs, settings).
+- Do not add Bootstrap, Material UI, Chakra, Ant Design, or parallel CSS frameworks.
+- Do not modify or restyle WhatsApp Web or Telegram Web content.
+- Application UI copy is **English (United States)**.
+
+## Layout
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Tabs                                                         │
+├──────────────┬───────────────────────────────────────────────┤
+│ Sidebar      │                                               │
+│              │         WebContentsView content area          │
+│ Accounts     │         (managed by main process)             │
+│ Settings     │                                               │
+└──────────────┴───────────────────────────────────────────────┘
+```
+
+- Tabs bar at top; sidebar on left; content area on right for messaging views.
+- Sidebar modes: `expanded` (icon + name) and `compact` (icon only with tooltips).
+
+## Standard labels
+
+Use these English labels consistently:
+
+- Accounts, Add Account, Settings, General, Appearance, Notifications
+- Account Settings, Reload WhatsApp, Logout, Delete Account, Cancel, Save Changes
+
+## React UI state (renderer only)
+
+```ts
+interface AppState {
+  activeAccountId: string | null;
+  openedAccountIds: string[];
+  sidebarMode: "expanded" | "compact";
+  settingsOpen: boolean;
+}
+```
+
+- React manages application UI state only.
+- Never hold or manipulate `WebContentsView` instances in the renderer.
+- Communicate view switches and resizes through the preload IPC bridge.
+
+## Theme
+
+- Support system, light, and dark themes for the application shell.
+- Theme applies to sidebar, tabs, and settings — not to embedded messaging web clients.
+
+## Settings structure
+
+```
+Settings
+├── General
+├── Appearance
+├── Accounts
+└── Advanced
+```
+
+Match sections and options defined in `about.md` § Settings.

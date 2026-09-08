@@ -1,0 +1,108 @@
+# =============================================================================
+# MM WA Telegram Multiple Accounts — .gitignore
+# Commit: source, config, lockfile, docs, .cursor rules/skills
+# Never commit: secrets, node_modules, build outputs, user/app runtime data
+# =============================================================================
+
+# --- Dependencies ---
+node_modules/
+
+# --- Electron / Vite / electron-vite build outputs ---
+out/
+dist/
+dist-electron/
+release/
+
+# electron-builder unpacked dirs & installers
+win-unpacked/
+mac/
+mac-arm64/
+linux-unpacked/
+*.exe
+*.msi
+*.blockmap
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+*.snap
+*.asar
+
+# --- TypeScript / test / lint tooling ---
+*.tsbuildinfo
+coverage/
+.vitest/
+.eslintcache
+
+# --- Environment & secrets (NEVER commit) ---
+.env
+.env.*
+!.env.example
+
+# Credentials, keys, local overrides
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+**/secrets/
+**/*-secrets.json
+
+# --- Logs ---
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# --- OS junk (Windows-first) ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- IDE / editor (local only) ---
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# .cursor/ is intentionally TRACKED (project rules + skills live here)
+
+# --- App runtime data (sessions live in Electron userData, not repo) ---
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.pre-restore
+*.restore-tmp
+
+# --- Package / backup archives ---
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# --- Native addons ---
+*.node
+
+# --- Scratch / cache ---
+tmp/
+temp/
+.cache/
+*.tmp
+*.temp
+*.local
+
+# --- Design source (runtime uses 16/32/256/1024.png and 256.ico) ---
+resources/ori.png

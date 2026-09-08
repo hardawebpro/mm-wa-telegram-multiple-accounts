@@ -1,0 +1,40 @@
+---
+description: Canonical project context, decision precedence, and Phase 1 scope for MM WA Telegram Multiple Accounts.
+alwaysApply: true
+---
+
+# Source of truth and change control
+
+Apply this precedence order:
+
+1. The user's current explicit instruction.
+2. `about.md`, the canonical product and technical specification.
+3. Existing accepted code behavior and tests.
+4. Official current documentation for Electron, React, Vite, and other dependencies.
+
+When sources conflict, do not silently choose one. Preserve working behavior, identify the conflict, and ask the user when the decision materially affects the product.
+
+## Protected decisions
+
+- Use **WebContentsView** for WhatsApp Web and Telegram Web instances.
+- Do **not** use `<webview>`, `iframe`, `BrowserView`, or one `BrowserWindow` per account.
+- Every account gets a unique persistent Electron partition (`persist:mmwa-{platform}-{id}`).
+- Never share one partition between multiple accounts.
+- Never store WhatsApp or Telegram authentication cookies or tokens in application config files.
+- Never use a phone number, username, or chat identifier as the primary account ID.
+- Application UI language is **English**.
+- Application shell styling uses **Tailwind CSS only**; do not restyle WhatsApp Web or Telegram Web.
+- Do not present the app as an official WhatsApp, Meta, or Telegram product.
+- Phase 1 excludes: bulk messaging, spam automation, contact scraping, unofficial WhatsApp/Telegram API integration, licensing, subscription, cloud sync, analytics, auto updater.
+- Do not automate QR scanning, OTP entry, or account authentication.
+
+## Mutation boundaries
+
+- Update `about.md` only when the user explicitly changes or asks to revise product decisions.
+- Do not add a dependency, cloud service, telemetry, or remote storage without approval.
+- Do not weaken security boundaries to make an integration easier.
+- Keep unrelated user changes intact.
+
+## Required clarification
+
+Ask before proceeding when a choice affects credential handling, session persistence, destructive account deletion, navigation restrictions, or UI conventions not already defined in `about.md`.

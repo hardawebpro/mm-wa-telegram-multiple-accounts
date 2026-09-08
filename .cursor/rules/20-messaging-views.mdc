@@ -1,0 +1,58 @@
+---
+description: MessagingViewManager, WebContentsView lifecycle, partitions, and platform URLs for MM WA Telegram Multiple Accounts.
+globs: "src/main/**/*"
+alwaysApply: false
+---
+
+# Messaging views and sessions
+
+See `about.md` § WebContentsView Manager, § Persistent Sessions, § Add Account Flow, § Delete Account Flow, § Performance Strategy.
+
+## MessagingViewManager
+
+Centralized service in the main process with this API:
+
+```
+createView(accountId)
+showView(accountId)
+hideView(accountId)
+destroyView(accountId)
+reloadView(accountId)
+clearSession(accountId)
+getView(accountId)
+resizeActiveView(bounds)
+```
+
+Use `Map<string, WebContentsView>` internally.
+
+## View lifecycle rules
+
+- Only the selected account view should be visible.
+- Inactive opened accounts remain alive (hidden) to maintain connection and notifications.
+- Do not destroy and recreate views every time the user switches tabs.
+- Closing a tab does not log out, delete the account, or delete its session.
+- Deleting an account must: destroy view → clear session → remove metadata → close tab → remove from sidebar.
+
+## Partitions
+
+- Format: `persist:mmwa-{platform}-{accountId}` (e.g. `persist:mmwa-whatsapp-a`, `persist:mmwa-telegram-a`).
+- Never share one partition between multiple accounts.
+- Create partition when account is created; clear on account deletion.
+
+## Platform URLs
+
+- WhatsApp (Personal and Business): `https://web.whatsapp.com/`
+- Telegram: official Telegram Web client URL (use a named constant; verify at implementation time).
+
+## Window integration
+
+- Attach views via `BrowserWindow.contentView.addChildView()`.
+- Call `resizeActiveView(bounds)` when the content area resizes; bounds come from the shell layout (sidebar + tabs offset).
+- Messaging views must not receive the application preload bridge.
+
+## Performance (Phase 1)
+
+- Active account: visible and fully active.
+- Inactive opened accounts: alive but hidden.
+- Deleted accounts: destroyed.
+- Do not enable account suspension by default.

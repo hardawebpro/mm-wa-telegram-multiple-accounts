@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-canvas: #f4f4f5;
+  --color-surface: #ffffff;
+  --color-sidebar: #18181b;
+  --color-sidebar-hover: #27272a;
+  --color-ink: #18181b;
+  --color-ink-secondary: #52525b;
+  --color-ink-muted: #a1a1aa;
+  --color-ink-on-dark: #fafafa;
+  --color-line: #e4e4e7;
+  --color-brand: #25d366;
+  --color-brand-telegram: #0088cc;
+  --color-danger: #ef4444;
+  --color-focus: #3b82f6;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full w-full overflow-hidden;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  html.dark body {
+    @apply bg-zinc-950 text-zinc-100;
+  }
+
+  html.dark {
+    --color-canvas: #09090b;
+    --color-surface: #18181b;
+    --color-sidebar: #09090b;
+    --color-sidebar-hover: #27272a;
+    --color-ink: #fafafa;
+    --color-ink-secondary: #a1a1aa;
+    --color-ink-muted: #71717a;
+    --color-line: #27272a;
+  }
+}
