@@ -86,7 +86,8 @@ export class AccountsStore {
   }
 
   getSettings(accountId: string): AccountSettings {
-    return this.data.accountSettings[accountId] ?? { ...DEFAULT_ACCOUNT_SETTINGS }
+    const stored = this.data.accountSettings[accountId]
+    return { ...DEFAULT_ACCOUNT_SETTINGS, ...stored }
   }
 
   setSettings(accountId: string, settings: AccountSettings): void {

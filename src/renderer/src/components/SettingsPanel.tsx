@@ -277,6 +277,36 @@ export function SettingsPanel({
                         />
                         Sound
                       </label>
+                      <p className="text-xs text-ink-muted">
+                        Calls use your microphone and camera through WhatsApp Web or Telegram Web. Also allow
+                        access in Windows Settings → Privacy → Microphone / Camera if prompted.
+                      </p>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={accountSettingsDraft.voiceCallsEnabled}
+                          onChange={(e) =>
+                            setAccountSettingsDraft({
+                              ...accountSettingsDraft,
+                              voiceCallsEnabled: e.target.checked
+                            })
+                          }
+                        />
+                        Voice calls (microphone)
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={accountSettingsDraft.videoCallsEnabled}
+                          onChange={(e) =>
+                            setAccountSettingsDraft({
+                              ...accountSettingsDraft,
+                              videoCallsEnabled: e.target.checked
+                            })
+                          }
+                        />
+                        Video calls (camera + microphone)
+                      </label>
                       <label className="block text-sm text-ink">
                         Zoom factor
                         <input

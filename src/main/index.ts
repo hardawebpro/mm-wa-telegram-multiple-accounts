@@ -76,7 +76,7 @@ function createWindow(): void {
 
   viewManager = new MessagingViewManager(() => mainWindow, {
     onViewCreated: (account, view) => {
-      configureMessagingSessionPermissions(account.partition, account.platform)
+      configureMessagingSessionPermissions(account.partition, account.platform, account.id, accountsStore)
       notificationService?.attachToView(account.id, view, account.platform)
       attachMessagingClipboardFocus(view)
     },

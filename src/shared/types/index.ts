@@ -17,6 +17,8 @@ export interface MessagingAccount {
 export interface AccountSettings {
   notificationsEnabled: boolean
   soundEnabled: boolean
+  voiceCallsEnabled: boolean
+  videoCallsEnabled: boolean
   zoomFactor: number
   backgroundMode: 'active' | 'suspended'
 }
@@ -87,6 +89,8 @@ export interface UpdateAccountInput {
 export const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = {
   notificationsEnabled: true,
   soundEnabled: true,
+  voiceCallsEnabled: true,
+  videoCallsEnabled: true,
   zoomFactor: 1,
   backgroundMode: 'active'
 }
