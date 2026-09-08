@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type {
   AccountSettings,
   AppSettings,
@@ -28,6 +28,14 @@ const SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: 'advanced', label: 'Advanced' }
 ]
 
+function settingsEqual(a: AppSettings, b: AppSettings): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function accountSettingsEqual(a: AccountSettings, b: AccountSettings): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
 export function SettingsPanel({
   settings,
   accounts,
@@ -44,6 +52,7 @@ export function SettingsPanel({
   const [draft, setDraft] = useState<AppSettings>(settings)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(accounts[0]?.id ?? null)
   const [accountSettingsDraft, setAccountSettingsDraft] = useState<AccountSettings | null>(null)
+  const [savedAccountSettings, setSavedAccountSettings] = useState<AccountSettings | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -61,8 +70,22 @@ export function SettingsPanel({
     const account = accounts.find((item) => item.id === selectedAccountId)
     setRenameValue(account?.name ?? '')
 
-    void getAccountSettings(selectedAccountId).then(setAccountSettingsDraft)
+    void getAccountSettings(selectedAccountId).then((loaded) => {
+      setAccountSettingsDraft(loaded)
+      setSavedAccountSettings(loaded)
+    })
   }, [accounts, getAccountSettings, selectedAccountId])
+
+  const hasAppChanges = useMemo(() => !settingsEqual(draft, settings), [draft, settings])
+
+  const hasAccountChanges = useMemo(() => {
+    if (!accountSettingsDraft || !savedAccountSettings) {
+      return false
+    }
+    return !accountSettingsEqual(accountSettingsDraft, savedAccountSettings)
+  }, [accountSettingsDraft, savedAccountSettings])
+
+  const hasUnsavedChanges = hasAppChanges || hasAccountChanges
 
   const handleSave = async (): Promise<void> => {
     setSaving(true)
@@ -71,6 +94,7 @@ export function SettingsPanel({
       await onSaveSettings(draft)
       if (selectedAccountId && accountSettingsDraft) {
         await setAccountSettings(selectedAccountId, accountSettingsDraft)
+        setSavedAccountSettings(accountSettingsDraft)
       }
       setMessage('Save Changes applied.')
     } catch (err) {
@@ -95,7 +119,7 @@ export function SettingsPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg px-3 py-1.5 text-sm text-ink-secondary hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="cursor-pointer rounded-lg px-3 py-1.5 text-sm text-ink-secondary hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           Cancel
         </button>
@@ -108,7 +132,7 @@ export function SettingsPanel({
               key={item.id}
               type="button"
               onClick={() => setSection(item.id)}
-              className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm ${
+              className={`mb-1 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm ${
                 section === item.id
                   ? 'bg-zinc-100 font-medium text-ink dark:bg-zinc-800'
                   : 'text-ink-secondary hover:bg-zinc-50 dark:hover:bg-zinc-900'
@@ -133,7 +157,7 @@ export function SettingsPanel({
                   ['restoreOpenedTabs', 'Restore opened tabs']
                 ] as const
               ).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-3 text-sm text-ink">
+                <label key={key} className="flex cursor-pointer items-center gap-3 text-sm text-ink">
                   <input
                     type="checkbox"
                     checked={draft.general[key]}
@@ -163,7 +187,7 @@ export function SettingsPanel({
                       appearance: { ...draft.appearance, theme: e.target.value as ThemeMode }
                     })
                   }
-                  className="mt-1 w-full rounded-lg border border-line bg-canvas px-3 py-2"
+                  className="mt-1 w-full cursor-pointer rounded-lg border border-line bg-canvas px-3 py-2"
                 >
                   <option value="system">System theme</option>
                   <option value="light">Light theme</option>
@@ -183,7 +207,7 @@ export function SettingsPanel({
                       }
                     })
                   }
-                  className="mt-1 w-full rounded-lg border border-line bg-canvas px-3 py-2"
+                  className="mt-1 w-full cursor-pointer rounded-lg border border-line bg-canvas px-3 py-2"
                 >
                   <option value="expanded">Expanded sidebar</option>
                   <option value="compact">Compact sidebar</option>
@@ -227,7 +251,7 @@ export function SettingsPanel({
                           className="mt-1 w-full rounded-lg border border-line bg-canvas px-3 py-2"
                         />
                       </label>
-                      <label className="flex items-center gap-2 text-sm">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
                         <input
                           type="checkbox"
                           checked={accountSettingsDraft.notificationsEnabled}
@@ -240,7 +264,7 @@ export function SettingsPanel({
                         />
                         Notifications
                       </label>
-                      <label className="flex items-center gap-2 text-sm">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
                         <input
                           type="checkbox"
                           checked={accountSettingsDraft.soundEnabled}
@@ -267,28 +291,28 @@ export function SettingsPanel({
                               zoomFactor: Number(e.target.value)
                             })
                           }
-                          className="mt-1 w-full"
+                          className="mt-1 w-full cursor-pointer"
                         />
                       </label>
                       <div className="flex flex-wrap gap-2 pt-2">
                         <button
                           type="button"
                           onClick={() => void onReloadAccount(selectedAccountId)}
-                          className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                          className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
                         >
                           Reload WhatsApp
                         </button>
                         <button
                           type="button"
                           onClick={() => void onClearSession(selectedAccountId)}
-                          className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                          className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
                         >
                           Logout
                         </button>
                         <button
                           type="button"
                           onClick={() => void handleDelete(selectedAccountId)}
-                          className="rounded-lg border border-danger px-3 py-1.5 text-sm text-danger hover:bg-red-50 dark:hover:bg-red-950"
+                          className="cursor-pointer rounded-lg border border-danger px-3 py-1.5 text-sm text-danger hover:bg-red-50 dark:hover:bg-red-950"
                         >
                           Delete Account
                         </button>
@@ -310,7 +334,7 @@ export function SettingsPanel({
               <button
                 type="button"
                 onClick={() => void window.mmwa.app.openDevTools()}
-                className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
                 Open DevTools in development mode
               </button>
@@ -331,7 +355,7 @@ export function SettingsPanel({
                     })
                   }
                 }}
-                className="block rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                className="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
                 Reset application settings
               </button>
@@ -341,22 +365,29 @@ export function SettingsPanel({
       </div>
 
       <div className="flex items-center justify-between border-t border-line px-6 py-3">
-        {message && <span className="text-sm text-ink-secondary">{message}</span>}
+        <span className="text-sm text-ink-secondary">
+          {message ??
+            (hasUnsavedChanges ? 'You have unsaved changes.' : 'No unsaved changes.')}
+        </span>
         <div className="ml-auto flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-ink-secondary hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="cursor-pointer rounded-lg px-4 py-2 text-sm text-ink-secondary hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             Cancel
           </button>
           <button
             type="button"
-            disabled={saving}
+            disabled={!hasUnsavedChanges || saving}
             onClick={() => void handleSave()}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              hasUnsavedChanges && !saving
+                ? 'cursor-pointer bg-brand text-white hover:bg-[#20bd5a]'
+                : 'cursor-not-allowed bg-zinc-200 text-ink-muted dark:bg-zinc-700 dark:text-zinc-400'
+            } ${saving ? 'cursor-wait opacity-70' : ''}`}
           >
-            Save Changes
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

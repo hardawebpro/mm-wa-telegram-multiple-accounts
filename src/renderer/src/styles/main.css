@@ -28,6 +28,32 @@
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
 
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'],
+  select,
+  label:has(input[type='checkbox']),
+  label:has(input[type='radio']) {
+    cursor: pointer;
+  }
+
+  input[type='range'] {
+    cursor: pointer;
+  }
+
+  input[type='text']:disabled,
+  select:disabled,
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   html.dark body {
     @apply bg-zinc-950 text-zinc-100;
   }
