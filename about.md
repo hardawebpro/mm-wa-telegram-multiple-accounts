@@ -1,5 +1,9 @@
 # MM WA Telegram Multiple Accounts
 
+<p align="center">
+  <img src="resources/256.png" alt="MM WA Telegram Multiple Accounts application icon" width="128" height="128" />
+</p>
+
 ## About
 
 **Application Name:** MM WA Telegram Multiple Accounts  
@@ -104,8 +108,7 @@ Typical supported WhatsApp Web functions include:
 - desktop notifications
 - Status viewing
 - Status replies
-- voice and video calls where supported by WhatsApp Web
-- Communities and other WhatsApp Web features currently available
+- voice and video calls where supported by WhatsApp Web or Telegram Web (see **Voice and Video Calls** below)
 
 Some WhatsApp native/mobile features may be unavailable or limited on WhatsApp Web or linked devices.
 
@@ -119,6 +122,26 @@ Known examples include:
 - mobile-only features introduced by WhatsApp
 
 Do not attempt to emulate unsupported native WhatsApp functionality unless it can be implemented safely at the application layer without bypassing WhatsApp systems.
+
+## Voice and Video Calls
+
+MM WA Telegram Multiple Accounts **supports voice and video calls** when the underlying WhatsApp Web or Telegram Web session offers them.
+
+How it works:
+
+- Calls run inside the official web client (WebRTC). The application does not implement a separate calling stack.
+- Microphone and camera access is granted through Electron `media` permissions for allowed origins only (`web.whatsapp.com`, `web.telegram.org`).
+- Each account has independent call settings under **Settings → Accounts → Account Settings**:
+  - **Voice calls (microphone)** — allow audio for voice calls
+  - **Video calls (camera + microphone)** — allow camera and audio for video calls
+- Both options are **enabled by default** for new accounts. Disable them per account if you do not want calls on that account.
+- Device selection (microphone, speaker, camera) uses the standard picker inside WhatsApp Web or Telegram Web.
+
+Requirements and limits:
+
+- **Windows 10+:** Allow microphone and camera for the app in **Settings → Privacy & security → Microphone / Camera** if Windows prompts or blocks access.
+- Call availability still depends on Meta/Telegram, account type, linked-device rules, and region — the application cannot enable calls if the web client does not offer them.
+- Restart the application after changing call permission settings if a call still fails immediately after toggling options.
 
 ## Custom Application Features
 
@@ -321,6 +344,10 @@ Each account may provide:
 - Account Type
 - Avatar/Icon
 - Enabled state
+- Notifications and sound
+- Voice calls (microphone)
+- Video calls (camera + microphone)
+- Zoom factor
 - Open
 - Edit
 - Reload
@@ -337,12 +364,14 @@ Each account may provide:
 
 ## Account-Specific Settings
 
-Each account can later support:
+Each account can support:
 
 ```ts
 interface AccountSettings {
   notificationsEnabled: boolean;
   soundEnabled: boolean;
+  voiceCallsEnabled: boolean;
+  videoCallsEnabled: boolean;
   zoomFactor: number;
   backgroundMode: "active" | "suspended";
 }
@@ -602,6 +631,7 @@ Launch MM WA Telegram Multiple Accounts
 
 User-facing guides and repository entry points:
 
+- [CARA-PAKAI.txt](CARA-PAKAI.txt) — panduan singkat Bahasa Indonesia (mulai dari download ZIP)
 - [README.md](README.md) — overview, requirements, quick start, troubleshooting (English + Indonesian)
 - [docs/HOW_TO_USE.en.md](docs/HOW_TO_USE.en.md) — step-by-step guide (English)
 - [docs/HOW_TO_USE.id.md](docs/HOW_TO_USE.id.md) — panduan langkah demi langkah (Bahasa Indonesia)

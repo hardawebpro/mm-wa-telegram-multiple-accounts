@@ -1,0 +1,168 @@
+================================================================================
+  MM WA Telegram Multiple Accounts — CARA PAKAI (Windows 10+)
+================================================================================
+
+Baca file ini jika bingung file mana yang harus diklik.
+Untuk panduan lengkap: docs\HOW_TO_USE.id.md
+
+
+--------------------------------------------------------------------------------
+RINGKASAN — HANYA INI YANG PERLU DIINGAT
+--------------------------------------------------------------------------------
+
+  Pertama kali setup     →  double-click  setup-first-time.bat  (1x saja)
+  Setiap hari buka app   →  double-click  shortcut di DESKTOP
+                            ("MM WA Telegram Multiple Accounts")
+
+  JANGAN copy file .bat ke Desktop.
+  JANGAN double-click start-app.bat untuk pemakaian normal.
+
+
+--------------------------------------------------------------------------------
+LANGKAH 0 — SEBELUM MULAI
+--------------------------------------------------------------------------------
+
+  1. Install Node.js LTS dari https://nodejs.org/
+     - Pilih versi LTS (20 atau 22)
+     - Centang "Add to PATH" saat install
+     - Setelah install, restart komputer (disarankan)
+
+  2. Download project dari GitHub:
+     - Buka halaman repository di GitHub
+     - Klik Code → Download ZIP
+     - Simpan file ZIP (mis. di Downloads)
+
+
+--------------------------------------------------------------------------------
+LANGKAH 1 — SIMPAN / EXTRACT FILE PROJECT
+--------------------------------------------------------------------------------
+
+  Rekomendasi lokasi folder (pilih salah satu):
+
+    C:\Users\NAMA_ANDA\Documents\MM-WA-Telegram\
+
+  atau
+
+    C:\Users\NAMA_ANDA\Desktop\Electron\mm-wa-telegram-multiple-accounts\
+
+  Cara extract:
+    1. Klik kanan file ZIP → Extract All...
+    2. Pilih folder tujuan (contoh: Documents\MM-WA-Telegram)
+    3. Pastikan isi folder berisi file seperti:
+         setup-first-time.bat
+         start-app.vbs
+         package.json
+         folder src\
+         folder resources\
+
+  PENTING:
+    - Jangan taruh di C:\Program Files (bisa gagal npm install)
+    - Semua file .bat dan .vbs TETAP di folder project — jangan pindah ke Desktop
+
+
+--------------------------------------------------------------------------------
+LANGKAH 2 — SETUP PERTAMA KALI (HANYA SEKALI)
+--------------------------------------------------------------------------------
+
+  1. Buka folder project di File Explorer
+  2. Double-click:  setup-first-time.bat
+  3. Tunggu sampai selesai (npm install bisa beberapa menit)
+  4. Shortcut otomatis dibuat di Desktop:
+       "MM WA Telegram Multiple Accounts"
+
+  Jika muncul error "Node.js not found" → install Node.js (Langkah 0) lalu ulangi.
+
+
+--------------------------------------------------------------------------------
+LANGKAH 3 — PERBAIKI SHORTCUT LAMA (JIKA TERMINAL MASIH MUNCUL)
+--------------------------------------------------------------------------------
+
+  Jika shortcut Desktop masih membuka jendela hitam (cmd) dan menunjuk ke
+  start-app.bat, perbarui shortcut:
+
+  1. Buka folder project
+  2. Double-click:  create-desktop-shortcut.bat
+  3. Shortcut Desktop diganti otomatis → sekarang pakai start-app.vbs
+     (app jalan TANPA jendela terminal)
+
+  Cara cek shortcut benar:
+    - Klik kanan shortcut Desktop → Properties
+    - Target harus berakhiran:  start-app.vbs
+    - BUKAN start-app.bat
+
+  Hapus dari Desktop jika ada:
+    - File start-app.bat yang ter-copy manual
+    - Shortcut duplikat dengan nama mirip
+
+
+--------------------------------------------------------------------------------
+LANGKAH 4 — JALANKAN APP (SETIAP HARI)
+--------------------------------------------------------------------------------
+
+  1. Double-click shortcut di Desktop:
+       "MM WA Telegram Multiple Accounts"
+  2. Tunggu app terbuka (beberapa detik)
+  3. Klik Add Account (+) → pilih WhatsApp atau Telegram
+  4. Scan QR / login seperti di browser
+
+  Minimize → app bisa ke system tray (jika diaktifkan di Settings)
+
+
+--------------------------------------------------------------------------------
+FILE DI FOLDER PROJECT — KAPAN DIPAKAI?
+--------------------------------------------------------------------------------
+
+  setup-first-time.bat
+      → Pertama kali saja (install dependensi + buat shortcut)
+
+  create-desktop-shortcut.bat
+      → Buat ulang shortcut Desktop (mis. masih ke start-app.bat)
+
+  start-app.vbs
+      → Dipakai shortcut (TIDAK perlu diklik manual)
+
+  start-app.bat
+      → Hanya untuk debug / lihat error di terminal (developer)
+
+  npm run dev
+      → Hanya dari Command Prompt jika Anda developer
+
+
+--------------------------------------------------------------------------------
+MASALAH UMUM
+--------------------------------------------------------------------------------
+
+  Terminal/cmd masih muncul saat buka shortcut
+      → Jalankan create-desktop-shortcut.bat (Langkah 3)
+
+  "Node.js not found"
+      → Install Node.js LTS, restart PC, jalankan setup-first-time.bat lagi
+
+  "Dependencies not installed"
+      → Jalankan setup-first-time.bat
+
+  App blank setelah Add Account
+      → Tunggu 30 detik, ganti tab, tutup modal Settings
+
+  Panggilan suara/video gagal
+      → Settings → Accounts → aktifkan Voice/Video calls
+      → Windows Settings → Privacy → Microphone / Camera → izinkan app
+
+  Shortcut tidak jalan
+      → Jangan pindahkan file .bat ke Desktop
+      → Pastikan folder project masih lengkap (node_modules ada)
+
+
+--------------------------------------------------------------------------------
+DOKUMENTASI LAIN
+--------------------------------------------------------------------------------
+
+  README.md              — ringkasan EN + ID
+  docs\HOW_TO_USE.id.md  — panduan detail Bahasa Indonesia
+  docs\HOW_TO_USE.en.md  — panduan detail English
+  about.md               — spesifikasi teknis produk
+
+
+================================================================================
+  Selesai. Ingat: sehari-hari cukup klik SATU shortcut di Desktop.
+================================================================================

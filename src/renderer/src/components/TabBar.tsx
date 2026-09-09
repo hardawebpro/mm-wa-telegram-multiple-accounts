@@ -24,17 +24,17 @@ export function TabBar({
     .filter((account): account is MessagingAccount => Boolean(account))
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-line bg-surface px-2">
+    <div className="flex h-10 shrink-0 items-end gap-0.5 border-b border-line bg-canvas px-2 dark:bg-zinc-900">
       {openedAccounts.map((account) => {
         const isActive = account.id === activeAccountId
         const unreadCount = unreadCounts[account.id] ?? 0
         return (
           <div
             key={account.id}
-            className={`group relative flex max-w-[200px] items-center gap-1 rounded-t-md border border-b-0 px-3 py-1.5 text-sm ${
+            className={`group relative flex max-w-[200px] items-center gap-1 rounded-t-md px-3 py-1.5 text-sm transition-colors ${
               isActive
-                ? 'border-line bg-canvas font-medium text-ink'
-                : 'border-transparent bg-transparent text-ink-secondary hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                ? '-mb-px z-10 border border-line border-b-tab-active bg-tab-active font-medium text-ink'
+                : 'border border-transparent bg-transparent text-ink-secondary hover:text-ink'
             }`}
           >
             <button type="button" className="truncate" onClick={() => onSelectTab(account.id)}>
@@ -60,7 +60,7 @@ export function TabBar({
         type="button"
         title="Add Account"
         onClick={onAddAccount}
-        className="ml-1 rounded-md px-2 py-1 text-lg leading-none text-ink-muted hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        className="mb-1 ml-1 rounded-md px-2 py-1 text-lg leading-none text-ink-muted hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
         +
       </button>

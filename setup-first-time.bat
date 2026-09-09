@@ -52,8 +52,8 @@ if not exist "node_modules\" (
   echo.
 )
 
-if not exist "start-app.bat" (
-  echo [ERROR] start-app.bat not found in project folder.
+if not exist "start-app.vbs" (
+  echo [ERROR] start-app.vbs not found in project folder.
   pause
   exit /b 1
 )

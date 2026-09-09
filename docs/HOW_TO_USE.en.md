@@ -141,7 +141,11 @@ Open **Settings** (gear icon):
 | Minimize to tray | Hide to system tray when minimizing |
 | Close to tray | Keep running in tray when clicking X |
 | Notifications | Desktop alerts for new messages |
+| Voice calls (microphone) | Allow voice calls via WhatsApp Web / Telegram Web |
+| Video calls (camera + microphone) | Allow video calls when the web client supports them |
 | Restore opened tabs | Reopen tabs after restart |
+
+If a call fails, enable **Voice calls** / **Video calls** for that account, then check **Windows Settings → Privacy & security → Microphone / Camera** for this app.
 
 ---
 
@@ -216,6 +220,7 @@ If `create-desktop-shortcut.bat` fails (e.g. PowerShell blocked):
 | No notifications | Settings / Windows | Enable in app + Windows notification settings |
 | Tray icon missing | Minimize to tray off | Enable in Settings → General |
 | Two accounts blank | View attach issue | Restart app; switch tabs |
+| Call needs permission / no audio | App or Windows blocked mic/camera | Settings → Accounts: enable Voice/Video calls; Windows Privacy settings |
 
 ### Still stuck?
 

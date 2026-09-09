@@ -3,7 +3,7 @@ setlocal EnableExtensions
 
 set "APP_NAME=MM WA Telegram Multiple Accounts"
 set "PROJECT_DIR=%~dp0"
-set "TARGET=%PROJECT_DIR%start-app.bat"
+set "TARGET=%PROJECT_DIR%start-app.vbs"
 set "SHORTCUT=%USERPROFILE%\Desktop\%APP_NAME%.lnk"
 
 if exist "%PROJECT_DIR%resources\256.ico" (
@@ -17,7 +17,7 @@ if exist "%PROJECT_DIR%resources\256.ico" (
 )
 
 if not exist "%TARGET%" (
-  echo [ERROR] start-app.bat not found at: %TARGET%
+  echo [ERROR] start-app.vbs not found at: %TARGET%
   pause
   exit /b 1
 )

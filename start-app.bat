@@ -40,6 +40,7 @@ if not exist "node_modules\" (
 )
 
 echo Starting MM WA Telegram Multiple Accounts...
+echo For a hidden terminal, use start-app.vbs or the Desktop shortcut.
 call npm run dev
 
 if errorlevel 1 (

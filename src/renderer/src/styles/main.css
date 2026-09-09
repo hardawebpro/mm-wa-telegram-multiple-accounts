@@ -14,6 +14,7 @@
   --color-brand-telegram: #0088cc;
   --color-danger: #ef4444;
   --color-focus: #3b82f6;
+  --color-tab-active: #ffffff;
 }
 
 @layer base {
@@ -67,5 +68,6 @@
     --color-ink-secondary: #a1a1aa;
     --color-ink-muted: #71717a;
     --color-line: #27272a;
+    --color-tab-active: #27272a;
   }
 }

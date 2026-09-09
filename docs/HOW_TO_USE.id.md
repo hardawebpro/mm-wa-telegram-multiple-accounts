@@ -141,7 +141,11 @@ Buka **Settings** (ikon gear):
 | Minimize to tray | Sembunyikan ke system tray saat minimize |
 | Close to tray | Tetap jalan di tray saat klik X |
 | Notifications | Notifikasi desktop untuk pesan baru |
+| Voice calls (microphone) | Izinkan panggilan suara via WhatsApp Web / Telegram Web |
+| Video calls (camera + microphone) | Izinkan panggilan video jika web client mendukung |
 | Restore opened tabs | Buka kembali tab setelah restart |
+
+Jika panggilan gagal, aktifkan **Voice calls** / **Video calls** untuk akun tersebut, lalu cek **Windows Settings → Privacy & security → Microphone / Camera** untuk app ini.
 
 ---
 
@@ -216,6 +220,7 @@ Jika `create-desktop-shortcut.bat` gagal (mis. PowerShell diblokir):
 | Notifikasi tidak muncul | Setting app / Windows | Aktifkan di app + pengaturan notifikasi Windows |
 | Icon tray hilang | Minimize to tray off | Aktifkan di Settings → General |
 | Dua akun blank | Masalah attach view | Restart app; ganti tab |
+| Panggilan minta permission / tidak ada suara | App/Windows blokir mic/kamera | Settings → Accounts: aktifkan Voice/Video calls; Windows Privacy |
 
 ### Masih bermasalah?
 

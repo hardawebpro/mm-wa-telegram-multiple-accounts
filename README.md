@@ -1,5 +1,9 @@
 # MM WA Telegram Multiple Accounts
 
+<p align="center">
+  <img src="resources/256.png" alt="MM WA Telegram Multiple Accounts application icon" width="96" height="96" />
+</p>
+
 Desktop application to manage multiple **WhatsApp Personal**, **WhatsApp Business**, and **Telegram** accounts from one window.
 
 This is **not** an official WhatsApp, Meta, or Telegram product. It hosts the official web clients inside isolated Electron sessions on your PC.
@@ -13,8 +17,11 @@ This is **not** an official WhatsApp, Meta, or Telegram product. It hosts the of
 - Multiple WA/TG accounts with separate login sessions
 - Sidebar, tabs, per-account settings
 - Desktop notifications and unread badges
+- **Voice and video calls** (when WhatsApp Web / Telegram Web supports them; configurable per account)
 - Minimize to system tray (optional)
 - Sessions persist after restart
+
+**Calls:** Enable or disable **Voice calls** and **Video calls** under **Settings → Accounts → Account Settings**. Also allow microphone/camera in Windows **Privacy & security** settings if prompted.
 
 ### Tech stack
 
@@ -43,10 +50,10 @@ This is **not** an official WhatsApp, Meta, or Telegram product. It hosts the of
 2. **Install Node.js LTS** once from [nodejs.org](https://nodejs.org/). Close and reopen any open terminal after install.
 3. Open the project folder and **double-click** `setup-first-time.bat`.
 4. A **Desktop shortcut** is created automatically.
-5. **Double-click the Desktop shortcut** to launch the app.
+5. **Double-click the Desktop shortcut** to launch the app (no terminal window).
 6. Click **Add Account**, choose platform, scan QR or sign in to Telegram.
 
-**Do not** copy only `start-app.bat` to the Desktop — it must stay in the project folder (the shortcut points to it with the correct working directory).
+**Do not** copy launcher files to the Desktop alone — they must stay in the project folder. The shortcut uses `start-app.vbs` (hidden). Use `start-app.bat` if you want a visible terminal for debugging.
 
 ### Manual setup (Command Prompt)
 
@@ -59,6 +66,12 @@ Then use the Desktop shortcut, or run:
 
 ```cmd
 start-app.bat
+```
+
+Hidden launch (no terminal window):
+
+```cmd
+wscript start-app.vbs
 ```
 
 PowerShell (same folder):
@@ -80,6 +93,7 @@ npm run typecheck
 
 ### Documentation
 
+- [CARA-PAKAI.txt](CARA-PAKAI.txt) — quick guide (Indonesian, from ZIP download)
 - [Step-by-step guide (English)](docs/HOW_TO_USE.en.md)
 - [Panduan lengkap (Bahasa Indonesia)](docs/HOW_TO_USE.id.md)
 - [Product specification](about.md)
@@ -107,6 +121,7 @@ npm run typecheck
 | No notifications | App or Windows settings | Enable notifications in app Settings + Windows Focus Assist off |
 | Port already in use | Another dev instance running | Close all Electron windows; end task in Task Manager if needed |
 | Generic shortcut icon | PNG used instead of ICO | Ensure `resources\256.ico` exists; re-run shortcut script |
+| Voice/video call blocked | App or Windows permission off | Settings → Accounts: enable Voice/Video calls; Windows Privacy → Microphone/Camera |
 
 ### License
 
@@ -121,8 +136,11 @@ MIT — see [LICENSE](LICENSE).
 - Beberapa akun WA/TG dengan sesi login terpisah
 - Sidebar, tab, pengaturan per akun
 - Notifikasi desktop dan badge unread
+- **Panggilan suara dan video** (jika WhatsApp Web / Telegram Web mendukung; bisa diatur per akun)
 - Minimize ke system tray (opsional)
 - Sesi tetap login setelah app ditutup
+
+**Panggilan:** Aktifkan/nonaktifkan **Voice calls** dan **Video calls** di **Settings → Accounts → Account Settings**. Izinkan juga mikrofon/kamera di Windows **Privacy & security** jika diminta.
 
 ### Stack teknologi
 
@@ -151,10 +169,10 @@ MIT — see [LICENSE](LICENSE).
 2. **Install Node.js LTS** sekali dari [nodejs.org](https://nodejs.org/). Tutup dan buka ulang terminal setelah install.
 3. Buka folder project lalu **double-click** `setup-first-time.bat`.
 4. **Shortcut Desktop** dibuat otomatis.
-5. **Double-click shortcut Desktop** untuk menjalankan app.
+5. **Double-click shortcut Desktop** untuk menjalankan app (tanpa jendela terminal).
 6. Klik **Add Account**, pilih platform, scan QR atau login Telegram.
 
-**Jangan** hanya copy `start-app.bat` ke Desktop — file harus tetap di folder project (shortcut mengarah ke file itu dengan working directory yang benar).
+**Jangan** hanya copy file launcher ke Desktop — harus tetap di folder project. Shortcut memakai `start-app.vbs` (tersembunyi). Pakai `start-app.bat` jika ingin terminal terlihat untuk debugging.
 
 ### Setup manual (Command Prompt)
 
@@ -167,6 +185,12 @@ Lalu pakai shortcut Desktop, atau jalankan:
 
 ```cmd
 start-app.bat
+```
+
+Launch tersembunyi (tanpa terminal):
+
+```cmd
+wscript start-app.vbs
 ```
 
 PowerShell (folder yang sama):
@@ -188,6 +212,7 @@ npm run typecheck
 
 ### Dokumentasi
 
+- [CARA-PAKAI.txt](CARA-PAKAI.txt) — panduan singkat (Bahasa Indonesia, mulai dari download ZIP)
 - [Step-by-step guide (English)](docs/HOW_TO_USE.en.md)
 - [Panduan lengkap (Bahasa Indonesia)](docs/HOW_TO_USE.id.md)
 - [Spesifikasi produk](about.md)
@@ -215,6 +240,7 @@ npm run typecheck
 | Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings app + matikan Focus Assist |
 | Port sudah dipakai | Instance dev masih jalan | Tutup semua jendela Electron; end task di Task Manager jika perlu |
 | Icon shortcut generik | Pakai PNG bukan ICO | Pastikan `resources\256.ico` ada; jalankan ulang script shortcut |
+| Panggilan suara/video gagal | Permission app/Windows mati | Settings → Accounts: aktifkan Voice/Video calls; Windows Privacy → Microphone/Camera |
 
 ### Lisensi
 
