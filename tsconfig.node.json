@@ -11,9 +11,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["electron-vite/node"],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": [
