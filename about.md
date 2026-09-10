@@ -4,14 +4,60 @@
   <img src="resources/256.png" alt="MM WA Telegram Multiple Accounts application icon" width="128" height="128" />
 </p>
 
+<p align="center">
+  <img src="screenshot.jpg" alt="MM WA Telegram Multiple Accounts dark mode — sidebar, account tabs, and WhatsApp Web with demo chat data" width="960" />
+</p>
+
+<p align="center"><em>Screenshot (dark mode, v0.1.0 Beta) — demo contact names and messages only; no real phone numbers.</em></p>
+
 ## About
 
 **Application Name:** MM WA Telegram Multiple Accounts  
-**Application Type:** Desktop application  
+**Version:** 0.1.0 Beta  
+**Release Status:** Beta — features, UI, and behavior may change; expect occasional bugs before a stable release  
+**Application Type:** Portable desktop application (no Windows installer in Phase 1)  
 **Primary Platform:** Windows 10+ (64-bit)  
 **Application Language:** English  
-**Distribution:** Open source (source + launcher scripts; not an official Meta or Telegram product)  
-**Future Goal:** Commercial desktop application
+**Distribution:** Free and open source (MIT license; source + launcher scripts; not an official Meta or Telegram product)  
+**Pricing:** Free — no paid tiers, subscriptions, or in-app purchases
+
+## Beta release
+
+The current public build is a **beta** version (`0.1.0-beta` in `package.json`).
+
+- Intended for early adopters and testers on Windows 10+
+- Not feature-complete relative to the long-term product vision
+- Breaking changes, refactors, and bug fixes are expected between beta builds
+- Users should report issues with OS version, app version, and steps to reproduce
+
+The running application shows the version in:
+
+- the **window title bar** (e.g. `MM WA Telegram Multiple Accounts - 0.1.0 Beta`)
+- the **sidebar footer** (expanded mode)
+- **Settings → Advanced → About**
+
+## Portable distribution (no installer)
+
+MM WA Telegram Multiple Accounts is designed as a **portable app** in Phase 1. Users do **not** run a traditional setup installer (`.exe`) to install the application into Program Files.
+
+### What the user does
+
+1. Download or clone the repository and **extract** it to any writable folder (e.g. `Documents\MM-WA-Telegram`, USB drive, or Desktop subfolder).
+2. Install **Node.js LTS** once from [nodejs.org](https://nodejs.org/) if not already present — this is the only system-level dependency.
+3. Run **`setup-first-time.bat`** once in the project folder. It runs `npm install` to download JavaScript dependencies into `node_modules` inside that folder.
+4. Launch the app from the **Desktop shortcut** (created by setup) or **`start-app.vbs`** in the project folder.
+
+### Why this is safe and portable
+
+- **No app installer:** The application itself is not registered in Add/Remove Programs and does not require administrator rights for normal use.
+- **Folder = app:** The entire app lives in the folder the user chose. Moving or deleting that folder removes the app files (not WhatsApp/Telegram sessions — see below).
+- **Dependencies are local:** `node_modules` stays inside the project directory; nothing is copied to `Program Files` by this project’s launchers.
+- **Credentials stay isolated:** WhatsApp and Telegram authentication cookies and tokens are **never** stored in application JSON config files. Each account uses a persistent Electron partition; session data lives under the standard Chromium/Electron user-data location for the app, separate from the portable project folder.
+- **One-time Node.js install:** Node.js is a development runtime used to run Electron from source in Phase 1. It is installed once on the PC, similar to installing Java or Python for other portable tools.
+
+### What is not portable by default
+
+Login sessions for WhatsApp Web and Telegram Web persist in Electron’s user profile on that Windows user account. Clearing an account session or uninstalling Electron user data is done per account in **Settings**, not by deleting the project folder alone.
 
 ## Background
 
@@ -87,7 +133,7 @@ https://web.whatsapp.com/
 
 Telegram accounts use an official Telegram Web client.
 
-The platform and account type must be stored as application metadata and may later be used for labels, filtering, settings, grouping, templates, and commercial features.
+The platform and account type must be stored as application metadata and may later be used for labels, filtering, settings, grouping, and templates.
 
 ## Messaging Platform Feature Scope
 
@@ -499,15 +545,12 @@ Example labels:
 - Cancel
 - Save Changes
 
-## Commercial-Ready Architecture
+## Modular Architecture
 
-Phase 1 is for private use, but the architecture must allow future modules such as:
+The application is free and open source. Optional future modules must remain separated from the core messaging account/session layer, for example:
 
 ```text
-licensing/
 updates/
-subscription/
-analytics/
 backup/
 profiles/
 workspace/
@@ -515,9 +558,7 @@ templates/
 platforms/
 ```
 
-These modules must remain separated from the core messaging account/session layer.
-
-Do not implement licensing or subscription logic during Phase 1.
+Do not add paid licensing, subscription tiers, payment flows, or usage-based billing. The product stays free for all users.
 
 ## Phase 1 Scope
 
@@ -549,11 +590,11 @@ Required:
 - secure WhatsApp Web renderer
 - secure Telegram Web renderer
 
-Not required in Phase 1:
+Not required in Phase 1 (and permanently out of scope for this product):
 
-- license server
-- payment
-- subscription
+- paid licensing or license server
+- payment or billing integration
+- subscription tiers
 - cloud synchronization
 - analytics
 - remote database
@@ -580,10 +621,10 @@ Possible future features:
 - notification management
 - tray integration
 - application auto update
-- license management
-- commercial subscription system
 
 Any feature that interacts with WhatsApp Web or Telegram Web must be designed so it does not bypass platform security, authentication, or service restrictions.
+
+Paid features, license keys, and subscription systems are not planned for this application.
 
 ## Definition of Done — Phase 1
 
@@ -636,4 +677,4 @@ User-facing guides and repository entry points:
 - [docs/HOW_TO_USE.en.md](docs/HOW_TO_USE.en.md) — step-by-step guide (English)
 - [docs/HOW_TO_USE.id.md](docs/HOW_TO_USE.id.md) — panduan langkah demi langkah (Bahasa Indonesia)
 
-**Public distribution (current):** Users download or clone this repository, install Node.js once, run `setup-first-time.bat`, then launch from the Desktop shortcut. There is no signed `.exe` installer in Phase 1.
+**Public distribution (current):** Beta portable build — users download or clone this repository, install Node.js once, run `setup-first-time.bat`, then launch from the Desktop shortcut. There is no signed `.exe` installer in Phase 1. See **Portable distribution (no installer)** above.

@@ -23,6 +23,23 @@ export function parseUnreadCountFromTitle(title: string): number {
   return 0
 }
 
+export function extractPreviewFromTitle(title: string): string | null {
+  if (!title) {
+    return null
+  }
+
+  const cleaned = title.replace(/^\(\d+\+?\)\s*/, '').trim()
+  if (!cleaned) {
+    return null
+  }
+
+  if (/^whatsapp$/i.test(cleaned) || /^telegram$/i.test(cleaned)) {
+    return null
+  }
+
+  return cleaned.length > 120 ? `${cleaned.slice(0, 117)}...` : cleaned
+}
+
 const WHATSAPP_UNREAD_SCRIPT = `
 (function() {
   const fromTitle = (document.title.match(/\\((\\d+)\\+?\\)/) || [])[1]
@@ -61,7 +78,12 @@ const TELEGRAM_UNREAD_SCRIPT = `
   }
 
   let total = 0
-  document.querySelectorAll('.chatlist-chat, .ChatBadge, .badge').forEach(function(el) {
+  const chatList = document.querySelector('.chatlist, .ChatFolders, #LeftColumn')
+  if (!chatList) {
+    return 0
+  }
+
+  chatList.querySelectorAll('.chatlist-chat, .ChatBadge.unread, .dialog-subtitle-badge-unread').forEach(function(el) {
     const text = (el.textContent || '').trim()
     if (/^\\d+$/.test(text)) {
       total += parseInt(text, 10)
@@ -83,8 +105,12 @@ export async function pollUnreadCount(webContents: WebContents, platform: Platfo
     const script = platform === 'telegram' ? TELEGRAM_UNREAD_SCRIPT : WHATSAPP_UNREAD_SCRIPT
     const domUnread = await webContents.executeJavaScript(script, true)
     if (typeof domUnread === 'number' && Number.isFinite(domUnread)) {
-      // Prefer DOM total — WhatsApp Business title often stays at (1) regardless of count.
-      return Math.max(domUnread, 0)
+      const normalizedDom = Math.max(domUnread, 0)
+      // Prefer DOM total when available; fall back to title when DOM returns zero but title has a count.
+      if (normalizedDom > 0) {
+        return normalizedDom
+      }
+      return titleUnread
     }
   } catch {
     // Fall back to document title when DOM polling is unavailable.

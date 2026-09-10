@@ -1,5 +1,6 @@
 import { BrowserWindow, shell } from 'electron'
 import { join } from 'path'
+import { APP_WINDOW_TITLE } from '@shared/constants/app'
 import { getAppWindowIcon } from '../utils/icons'
 
 const SHELL_WEB_PREFERENCES = {
@@ -19,7 +20,7 @@ export function createMainWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
-    title: 'MM WA Telegram Multiple Accounts',
+    title: APP_WINDOW_TITLE,
     ...(windowIcon.isEmpty() ? {} : { icon: windowIcon }),
     webPreferences: SHELL_WEB_PREFERENCES
   })

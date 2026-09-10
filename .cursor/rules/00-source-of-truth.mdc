@@ -25,7 +25,7 @@ When sources conflict, do not silently choose one. Preserve working behavior, id
 - Application UI language is **English**.
 - Application shell styling uses **Tailwind CSS only**; do not restyle WhatsApp Web or Telegram Web.
 - Do not present the app as an official WhatsApp, Meta, or Telegram product.
-- Phase 1 excludes: bulk messaging, spam automation, contact scraping, unofficial WhatsApp/Telegram API integration, licensing, subscription, cloud sync, analytics, auto updater.
+- Phase 1 excludes: bulk messaging, spam automation, contact scraping, unofficial WhatsApp/Telegram API integration, paid licensing, subscriptions, cloud sync, analytics, auto updater. The product is free and open source — do not add payment or subscription features.
 - Do not automate QR scanning, OTP entry, or account authentication.
 
 ## Mutation boundaries

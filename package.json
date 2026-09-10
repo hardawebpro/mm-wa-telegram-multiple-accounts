@@ -1,6 +1,6 @@
 {
   "name": "mm-wa-telegram-multiple-accounts",
-  "version": "0.1.0",
+  "version": "0.1.0-beta",
   "description": "Manage multiple WhatsApp and Telegram accounts from a single Electron desktop application",
   "main": "./out/main/index.js",
   "author": "JBS Group",

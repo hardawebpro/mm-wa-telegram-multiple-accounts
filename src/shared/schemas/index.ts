@@ -39,6 +39,7 @@ export const accountSettingsSchema = z.object({
   settings: z.object({
     notificationsEnabled: z.boolean(),
     soundEnabled: z.boolean(),
+    notificationPreviewEnabled: z.boolean(),
     voiceCallsEnabled: z.boolean(),
     videoCallsEnabled: z.boolean(),
     zoomFactor: z.number().min(0.5).max(3),

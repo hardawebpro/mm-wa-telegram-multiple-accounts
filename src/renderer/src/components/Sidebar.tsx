@@ -1,3 +1,4 @@
+import { APP_NAME, APP_VERSION_LABEL } from '@shared/constants/app'
 import type { MessagingAccount, SidebarMode } from '@shared/types'
 
 interface SidebarProps {
@@ -117,6 +118,20 @@ export function Sidebar({
           </span>
           {!isCompact && <span>Settings</span>}
         </button>
+      </div>
+
+      <div
+        className={`border-t border-zinc-800 px-3 py-2 text-ink-muted ${isCompact ? 'text-center' : ''}`}
+        title={`${APP_NAME} - ${APP_VERSION_LABEL}`}
+      >
+        {isCompact ? (
+          <span className="text-[10px] font-semibold uppercase tracking-wide">Beta</span>
+        ) : (
+          <>
+            <p className="truncate text-[10px] font-medium text-ink-on-dark/80">{APP_NAME}</p>
+            <p className="text-[10px]">{APP_VERSION_LABEL}</p>
+          </>
+        )}
       </div>
     </aside>
   )

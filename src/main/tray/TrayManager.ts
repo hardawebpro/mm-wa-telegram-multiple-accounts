@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, Tray } from 'electron'
+import { APP_WINDOW_TITLE } from '@shared/constants/app'
 import type { AppSettings } from '@shared/types'
 import { getTrayIcon } from '../utils/icons'
 
@@ -55,7 +56,7 @@ export class TrayManager {
     }
 
     this.tray = new Tray(getTrayIcon())
-    this.tray.setToolTip('MM WA Telegram Multiple Accounts')
+    this.tray.setToolTip(APP_WINDOW_TITLE)
     this.tray.setContextMenu(this.buildContextMenu())
 
     this.tray.on('click', () => {

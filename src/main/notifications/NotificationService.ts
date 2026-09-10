@@ -3,7 +3,7 @@ import type { WebContentsView } from 'electron'
 import type { AccountsStore } from '../store/accounts'
 import type { MessagingViewManager } from '../messaging/MessagingViewManager'
 import type { Platform } from '@shared/types'
-import { parseUnreadCountFromTitle, pollUnreadCount } from './unreadMonitor'
+import { extractPreviewFromTitle, pollUnreadCount } from './unreadMonitor'
 
 interface TrackedView {
   accountId: string
@@ -19,9 +19,19 @@ interface NotificationServiceDeps {
   onUnreadChanged: (accountId: string, unreadCount: number) => void
 }
 
+const POLL_INTERVAL_MS = 2000
+const TITLE_REFRESH_DEBOUNCE_MS = 500
+const NOTIFICATION_DEBOUNCE_MS = 800
+
 export class NotificationService {
-  private readonly lastUnreadByAccount = new Map<string, number>()
+  /** Latest polled unread count — used for badge display. */
+  private readonly polledUnreadByAccount = new Map<string, number>()
+  /** Baseline for desktop notifications; only moves when user reads or we notify. */
+  private readonly notificationBaselineByAccount = new Map<string, number>()
   private readonly trackedViews = new Map<string, TrackedView>()
+  private readonly titleRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private readonly pendingNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private readonly pendingNotifyTitle = new Map<string, string>()
   private pollTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(private readonly deps: NotificationServiceDeps) {
@@ -34,18 +44,23 @@ export class NotificationService {
     }
 
     this.trackedViews.set(accountId, { accountId, platform, view })
-    this.lastUnreadByAccount.set(accountId, 0)
+    this.polledUnreadByAccount.set(accountId, 0)
+    this.notificationBaselineByAccount.set(accountId, 0)
 
     view.webContents.on('page-title-updated', (_event, title) => {
-      void this.syncUnread(accountId, parseUnreadCountFromTitle(title), title)
+      this.pendingNotifyTitle.set(accountId, title)
+      this.scheduleTitleRefresh(accountId)
     })
 
     void this.refreshAccountUnread(accountId)
   }
 
   detachFromView(accountId: string, view: WebContentsView): void {
+    this.clearAccountTimers(accountId)
     this.trackedViews.delete(accountId)
-    this.lastUnreadByAccount.delete(accountId)
+    this.polledUnreadByAccount.delete(accountId)
+    this.notificationBaselineByAccount.delete(accountId)
+    this.pendingNotifyTitle.delete(accountId)
 
     if (!view.webContents.isDestroyed()) {
       view.webContents.removeAllListeners('page-title-updated')
@@ -59,12 +74,45 @@ export class NotificationService {
       clearInterval(this.pollTimer)
       this.pollTimer = null
     }
+
+    for (const accountId of this.trackedViews.keys()) {
+      this.clearAccountTimers(accountId)
+    }
+  }
+
+  private clearAccountTimers(accountId: string): void {
+    const titleTimer = this.titleRefreshTimers.get(accountId)
+    if (titleTimer) {
+      clearTimeout(titleTimer)
+      this.titleRefreshTimers.delete(accountId)
+    }
+
+    const notifyTimer = this.pendingNotifyTimers.get(accountId)
+    if (notifyTimer) {
+      clearTimeout(notifyTimer)
+      this.pendingNotifyTimers.delete(accountId)
+    }
+  }
+
+  private scheduleTitleRefresh(accountId: string): void {
+    const existing = this.titleRefreshTimers.get(accountId)
+    if (existing) {
+      clearTimeout(existing)
+    }
+
+    this.titleRefreshTimers.set(
+      accountId,
+      setTimeout(() => {
+        this.titleRefreshTimers.delete(accountId)
+        void this.refreshAccountUnread(accountId)
+      }, TITLE_REFRESH_DEBOUNCE_MS)
+    )
   }
 
   private startPolling(): void {
     this.pollTimer = setInterval(() => {
       void this.pollAllViews()
-    }, 2000)
+    }, POLL_INTERVAL_MS)
   }
 
   private async pollAllViews(): Promise<void> {
@@ -79,17 +127,31 @@ export class NotificationService {
       return
     }
 
+    const title = tracked.view.webContents.getTitle()
+    this.pendingNotifyTitle.set(accountId, title)
+
     const unreadCount = await pollUnreadCount(tracked.view.webContents, tracked.platform)
-    await this.syncUnread(accountId, unreadCount)
+    this.syncUnread(accountId, unreadCount, title)
   }
 
-  private async syncUnread(accountId: string, unreadCount: number, title?: string): Promise<void> {
-    const previousUnread = this.lastUnreadByAccount.get(accountId) ?? 0
-    this.lastUnreadByAccount.set(accountId, unreadCount)
+  private syncUnread(accountId: string, unreadCount: number, title?: string): void {
+    const normalizedCount = Math.max(0, Math.floor(unreadCount))
+    const previousCount = this.polledUnreadByAccount.get(accountId) ?? 0
+    this.polledUnreadByAccount.set(accountId, normalizedCount)
 
-    this.deps.onUnreadChanged(accountId, unreadCount)
+    if (normalizedCount !== previousCount) {
+      this.deps.onUnreadChanged(accountId, normalizedCount)
+    }
 
-    if (unreadCount <= previousUnread) {
+    const baseline = this.notificationBaselineByAccount.get(accountId) ?? 0
+
+    if (normalizedCount < baseline) {
+      this.notificationBaselineByAccount.set(accountId, normalizedCount)
+      this.clearPendingNotification(accountId)
+      return
+    }
+
+    if (normalizedCount <= baseline) {
       return
     }
 
@@ -100,6 +162,7 @@ export class NotificationService {
 
     const settings = this.deps.accountsStore.getSettings(accountId)
     if (!settings.notificationsEnabled) {
+      this.notificationBaselineByAccount.set(accountId, normalizedCount)
       return
     }
 
@@ -107,19 +170,81 @@ export class NotificationService {
     const mainWindow = this.deps.getMainWindow()
     const activeAccountId = viewManager?.getActiveAccountId() ?? null
     const windowFocused = mainWindow?.isFocused() ?? false
-
     const shouldNotify = !windowFocused || activeAccountId !== accountId
+
     if (!shouldNotify) {
+      this.notificationBaselineByAccount.set(accountId, normalizedCount)
       return
     }
 
-    const newMessages = unreadCount - previousUnread
+    if (title) {
+      this.pendingNotifyTitle.set(accountId, title)
+    }
+
+    this.scheduleNotification(accountId)
+  }
+
+  private clearPendingNotification(accountId: string): void {
+    const timer = this.pendingNotifyTimers.get(accountId)
+    if (timer) {
+      clearTimeout(timer)
+      this.pendingNotifyTimers.delete(accountId)
+    }
+  }
+
+  private scheduleNotification(accountId: string): void {
+    this.clearPendingNotification(accountId)
+
+    this.pendingNotifyTimers.set(
+      accountId,
+      setTimeout(() => {
+        this.pendingNotifyTimers.delete(accountId)
+        void this.flushNotification(accountId)
+      }, NOTIFICATION_DEBOUNCE_MS)
+    )
+  }
+
+  private async flushNotification(accountId: string): Promise<void> {
+    const normalizedCount = this.polledUnreadByAccount.get(accountId) ?? 0
+    const baseline = this.notificationBaselineByAccount.get(accountId) ?? 0
+
+    if (normalizedCount <= baseline) {
+      return
+    }
+
+    const account = this.deps.accountsStore.get(accountId)
+    if (!account) {
+      return
+    }
+
+    const settings = this.deps.accountsStore.getSettings(accountId)
+    if (!settings.notificationsEnabled) {
+      this.notificationBaselineByAccount.set(accountId, normalizedCount)
+      return
+    }
+
+    const viewManager = this.deps.getViewManager()
+    const mainWindow = this.deps.getMainWindow()
+    const activeAccountId = viewManager?.getActiveAccountId() ?? null
+    const windowFocused = mainWindow?.isFocused() ?? false
+    const shouldNotify = !windowFocused || activeAccountId !== accountId
+
+    if (!shouldNotify) {
+      this.notificationBaselineByAccount.set(accountId, normalizedCount)
+      return
+    }
+
+    const newMessages = normalizedCount - baseline
+    this.notificationBaselineByAccount.set(accountId, normalizedCount)
+
+    const title = this.pendingNotifyTitle.get(accountId)
     this.showNotification(
       account.name,
       account.platform,
       newMessages,
       accountId,
       settings.soundEnabled,
+      settings.notificationPreviewEnabled,
       title
     )
   }
@@ -130,17 +255,28 @@ export class NotificationService {
     newMessages: number,
     accountId: string,
     soundEnabled: boolean,
-    _title?: string
+    previewEnabled: boolean,
+    pageTitle?: string
   ): void {
     if (!Notification.isSupported()) {
       return
     }
 
     const platformLabel = platform === 'telegram' ? 'Telegram' : 'WhatsApp'
-    const body =
-      newMessages === 1
-        ? 'You have a new message.'
-        : `You have ${newMessages} new messages.`
+    const preview = previewEnabled ? extractPreviewFromTitle(pageTitle ?? '') : null
+
+    let body: string
+    if (previewEnabled && preview) {
+      body =
+        newMessages === 1
+          ? preview
+          : `${newMessages} new messages — ${preview}`
+    } else {
+      body =
+        newMessages === 1
+          ? 'You have a new message.'
+          : `You have ${newMessages} new messages.`
+    }
 
     const notification = new Notification({
       title: `${accountName} (${platformLabel})`,

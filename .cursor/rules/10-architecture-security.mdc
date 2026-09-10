@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Architecture and security
 
-See `about.md` § Security Requirements, § UI State, § Commercial-Ready Architecture.
+See `about.md` § Security Requirements, § UI State, § Modular Architecture.
 
 ## Process ownership
 

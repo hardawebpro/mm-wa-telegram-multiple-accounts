@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { APP_IS_BETA, APP_NAME, APP_VERSION_LABEL } from '@shared/constants/app'
 import type {
   AccountSettings,
   AppSettings,
@@ -277,6 +278,23 @@ export function SettingsPanel({
                         />
                         Sound
                       </label>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={accountSettingsDraft.notificationPreviewEnabled}
+                          onChange={(e) =>
+                            setAccountSettingsDraft({
+                              ...accountSettingsDraft,
+                              notificationPreviewEnabled: e.target.checked
+                            })
+                          }
+                        />
+                        Notification preview
+                      </label>
+                      <p className="text-xs text-ink-muted">
+                        When enabled, desktop notifications may show the chat name or title from the web client.
+                        Disable for a generic message only.
+                      </p>
                       <p className="text-xs text-ink-muted">
                         Calls use your microphone and camera through WhatsApp Web or Telegram Web. Also allow
                         access in Windows Settings → Privacy → Microphone / Camera if prompted.
@@ -357,6 +375,30 @@ export function SettingsPanel({
           {section === 'advanced' && (
             <div className="max-w-lg space-y-4">
               <h2 className="text-lg font-medium text-ink">Advanced</h2>
+
+              <div className="space-y-2 rounded-lg border border-line bg-zinc-50 p-4 dark:bg-zinc-900/40">
+                <h3 className="text-sm font-medium text-ink">About</h3>
+                <p className="text-sm font-medium text-ink">{APP_NAME}</p>
+                <p className="text-sm text-ink-secondary">Version {APP_VERSION_LABEL}</p>
+                {APP_IS_BETA && (
+                  <p className="text-xs text-ink-muted">
+                    This is a beta release. Features and behavior may change; you may encounter bugs before a
+                    stable version is published.
+                  </p>
+                )}
+                <p className="text-xs leading-relaxed text-ink-muted">
+                  <span className="font-medium text-ink-secondary">Portable app — no installer required.</span>{' '}
+                  Extract the project folder anywhere on your PC. Run setup once to install Node.js dependencies
+                  only (<code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">npm install</code> via{' '}
+                  <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">setup-first-time.bat</code>). The
+                  application does not install into Program Files or modify the Windows registry. Launch from the
+                  Desktop shortcut or <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">start-app.vbs</code>
+                  . WhatsApp and Telegram login sessions are stored in Electron&apos;s isolated profile under your
+                  Windows user account — not in config files inside this folder — which keeps credentials separate
+                  from the portable project files.
+                </p>
+              </div>
+
               <p className="text-sm text-ink-secondary">
                 Development tools and reset options. Session data is managed by Electron and stored in your user
                 profile, not in this project folder.
