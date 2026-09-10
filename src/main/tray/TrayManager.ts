@@ -37,6 +37,10 @@ export class TrayManager {
     this.isQuitting = true
   }
 
+  showMainWindow(): void {
+    this.revealMainWindow()
+  }
+
   dispose(): void {
     this.tray?.destroy()
     this.tray = null
@@ -60,11 +64,11 @@ export class TrayManager {
     this.tray.setContextMenu(this.buildContextMenu())
 
     this.tray.on('click', () => {
-      this.showMainWindow()
+      this.revealMainWindow()
     })
 
     this.tray.on('double-click', () => {
-      this.showMainWindow()
+      this.revealMainWindow()
     })
   }
 
@@ -72,7 +76,7 @@ export class TrayManager {
     return Menu.buildFromTemplate([
       {
         label: 'Show',
-        click: () => this.showMainWindow()
+        click: () => this.revealMainWindow()
       },
       { type: 'separator' },
       {
@@ -91,7 +95,7 @@ export class TrayManager {
     window.hide()
   }
 
-  private showMainWindow(): void {
+  private revealMainWindow(): void {
     const window = this.getMainWindow()
     if (!window || window.isDestroyed()) {
       return

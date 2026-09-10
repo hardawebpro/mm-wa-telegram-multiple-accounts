@@ -68,8 +68,9 @@ const mmwaApi = {
       ipcRenderer.on('account:unread-changed', listener)
       return () => ipcRenderer.removeListener('account:unread-changed', listener)
     },
-    onOpenAccount: (callback: (payload: { accountId: string }) => void): (() => void) => {
-      const listener = (_event: unknown, payload: { accountId: string }): void => callback(payload)
+    onOpenAccount: (callback: (payload: { accountId: string; chatLabel?: string | null }) => void): (() => void) => {
+      const listener = (_event: unknown, payload: { accountId: string; chatLabel?: string | null }): void =>
+        callback(payload)
       ipcRenderer.on('notification:open-account', listener)
       return () => ipcRenderer.removeListener('notification:open-account', listener)
     }

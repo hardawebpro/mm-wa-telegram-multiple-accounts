@@ -92,8 +92,9 @@ export function configureMessagingSessionPermissions(
     const origin = resolveRequestOrigin(details)
     const originAllowed = origin ? isAllowedOrigin(origin, platform) : false
 
-    if (permission === 'notifications' && originAllowed) {
-      callback(true)
+    if (permission === 'notifications') {
+      // Desktop notifications are handled by the app shell (NotificationService).
+      callback(false)
       return
     }
 
@@ -129,7 +130,7 @@ export function configureMessagingSessionPermissions(
     const settings = accountsStore.getSettings(accountId)
 
     if (permission === 'notifications') {
-      return true
+      return false
     }
 
     if (permission === 'media') {

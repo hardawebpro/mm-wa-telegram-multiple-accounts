@@ -1,9 +1,15 @@
-import { Notification, BrowserWindow } from 'electron'
+import { Notification, BrowserWindow, nativeImage } from 'electron'
 import type { WebContentsView } from 'electron'
 import type { AccountsStore } from '../store/accounts'
 import type { MessagingViewManager } from '../messaging/MessagingViewManager'
 import type { Platform } from '@shared/types'
-import { extractPreviewFromTitle, pollUnreadCount } from './unreadMonitor'
+import { getResourceIconPath } from '../utils/icons'
+import { focusChatWithRetry } from './focusChat'
+import {
+  extractPreviewFromTitle,
+  pollLatestUnreadChatWithRetry,
+  pollUnreadCount
+} from './unreadMonitor'
 
 interface TrackedView {
   accountId: string
@@ -11,11 +17,17 @@ interface TrackedView {
   view: WebContentsView
 }
 
+interface NotificationTarget {
+  accountId: string
+  chatLabel: string | null
+}
+
 interface NotificationServiceDeps {
   getMainWindow: () => BrowserWindow | null
   getViewManager: () => MessagingViewManager | null
   accountsStore: AccountsStore
-  onOpenAccount: (accountId: string) => void
+  showMainWindow: () => void
+  onOpenAccount: (accountId: string, chatLabel: string | null) => void
   onUnreadChanged: (accountId: string, unreadCount: number) => void
 }
 
@@ -24,15 +36,19 @@ const TITLE_REFRESH_DEBOUNCE_MS = 500
 const NOTIFICATION_DEBOUNCE_MS = 800
 
 export class NotificationService {
-  /** Latest polled unread count — used for badge display. */
   private readonly polledUnreadByAccount = new Map<string, number>()
-  /** Baseline for desktop notifications; only moves when user reads or we notify. */
   private readonly notificationBaselineByAccount = new Map<string, number>()
   private readonly trackedViews = new Map<string, TrackedView>()
   private readonly titleRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly pendingNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly pendingNotifyTitle = new Map<string, string>()
+  private readonly pendingNotifyChatLabel = new Map<string, string | null>()
+  private readonly pendingNotifyMessagePreview = new Map<string, string | null>()
+  /** Keep references alive until click/close — otherwise Windows may GC before the user clicks. */
+  private readonly liveNotifications = new Set<Notification>()
+  private readonly notificationTargets = new Map<Notification, NotificationTarget>()
   private pollTimer: ReturnType<typeof setInterval> | null = null
+  private readonly notificationIcon = nativeImage.createFromPath(getResourceIconPath(256))
 
   constructor(private readonly deps: NotificationServiceDeps) {
     this.startPolling()
@@ -49,6 +65,7 @@ export class NotificationService {
 
     view.webContents.on('page-title-updated', (_event, title) => {
       this.pendingNotifyTitle.set(accountId, title)
+      this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
       this.scheduleTitleRefresh(accountId)
     })
 
@@ -61,6 +78,8 @@ export class NotificationService {
     this.polledUnreadByAccount.delete(accountId)
     this.notificationBaselineByAccount.delete(accountId)
     this.pendingNotifyTitle.delete(accountId)
+    this.pendingNotifyChatLabel.delete(accountId)
+    this.pendingNotifyMessagePreview.delete(accountId)
 
     if (!view.webContents.isDestroyed()) {
       view.webContents.removeAllListeners('page-title-updated')
@@ -78,6 +97,12 @@ export class NotificationService {
     for (const accountId of this.trackedViews.keys()) {
       this.clearAccountTimers(accountId)
     }
+
+    for (const notification of this.liveNotifications) {
+      notification.close()
+    }
+    this.liveNotifications.clear()
+    this.notificationTargets.clear()
   }
 
   private clearAccountTimers(accountId: string): void {
@@ -129,6 +154,7 @@ export class NotificationService {
 
     const title = tracked.view.webContents.getTitle()
     this.pendingNotifyTitle.set(accountId, title)
+    this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
 
     const unreadCount = await pollUnreadCount(tracked.view.webContents, tracked.platform)
     this.syncUnread(accountId, unreadCount, title)
@@ -170,7 +196,8 @@ export class NotificationService {
     const mainWindow = this.deps.getMainWindow()
     const activeAccountId = viewManager?.getActiveAccountId() ?? null
     const windowFocused = mainWindow?.isFocused() ?? false
-    const shouldNotify = !windowFocused || activeAccountId !== accountId
+    const windowVisible = mainWindow?.isVisible() ?? false
+    const shouldNotify = !windowVisible || !windowFocused || activeAccountId !== accountId
 
     if (!shouldNotify) {
       this.notificationBaselineByAccount.set(accountId, normalizedCount)
@@ -179,6 +206,7 @@ export class NotificationService {
 
     if (title) {
       this.pendingNotifyTitle.set(accountId, title)
+      this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
     }
 
     this.scheduleNotification(accountId)
@@ -227,7 +255,8 @@ export class NotificationService {
     const mainWindow = this.deps.getMainWindow()
     const activeAccountId = viewManager?.getActiveAccountId() ?? null
     const windowFocused = mainWindow?.isFocused() ?? false
-    const shouldNotify = !windowFocused || activeAccountId !== accountId
+    const windowVisible = mainWindow?.isVisible() ?? false
+    const shouldNotify = !windowVisible || !windowFocused || activeAccountId !== accountId
 
     if (!shouldNotify) {
       this.notificationBaselineByAccount.set(accountId, normalizedCount)
@@ -237,7 +266,25 @@ export class NotificationService {
     const newMessages = normalizedCount - baseline
     this.notificationBaselineByAccount.set(accountId, normalizedCount)
 
-    const title = this.pendingNotifyTitle.get(accountId)
+    const tracked = this.trackedViews.get(accountId)
+    const latestChat =
+      tracked && !tracked.view.webContents.isDestroyed()
+        ? await pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform)
+        : null
+
+    const titleFromPage = this.pendingNotifyTitle.get(accountId)
+    const chatLabel =
+      latestChat?.chatName ??
+      this.pendingNotifyChatLabel.get(accountId) ??
+      extractPreviewFromTitle(titleFromPage ?? '')
+
+    const messagePreview = settings.notificationPreviewEnabled
+      ? (latestChat?.messagePreview ?? null)
+      : null
+
+    this.pendingNotifyChatLabel.set(accountId, chatLabel)
+    this.pendingNotifyMessagePreview.set(accountId, messagePreview)
+
     this.showNotification(
       account.name,
       account.platform,
@@ -245,7 +292,8 @@ export class NotificationService {
       accountId,
       settings.soundEnabled,
       settings.notificationPreviewEnabled,
-      title
+      chatLabel,
+      messagePreview
     )
   }
 
@@ -256,49 +304,114 @@ export class NotificationService {
     accountId: string,
     soundEnabled: boolean,
     previewEnabled: boolean,
-    pageTitle?: string
+    chatLabel: string | null,
+    messagePreview: string | null
   ): void {
     if (!Notification.isSupported()) {
       return
     }
 
     const platformLabel = platform === 'telegram' ? 'Telegram' : 'WhatsApp'
-    const preview = previewEnabled ? extractPreviewFromTitle(pageTitle ?? '') : null
+    const resolvedChatLabel = chatLabel?.trim() || null
+    const resolvedPreview = messagePreview?.trim() || null
 
+    let title = 'New message'
     let body: string
-    if (previewEnabled && preview) {
+
+    if (previewEnabled && resolvedChatLabel && resolvedPreview) {
+      title = resolvedChatLabel
+      body = resolvedPreview
+    } else if (previewEnabled && resolvedPreview) {
+      title = 'New message'
+      body = resolvedPreview
+    } else if (previewEnabled && resolvedChatLabel) {
+      title = resolvedChatLabel
       body =
         newMessages === 1
-          ? preview
-          : `${newMessages} new messages — ${preview}`
+          ? `New message · ${accountName} (${platformLabel})`
+          : `${newMessages} new messages · ${accountName} (${platformLabel})`
     } else {
       body =
         newMessages === 1
-          ? 'You have a new message.'
-          : `You have ${newMessages} new messages.`
+          ? `${accountName} (${platformLabel})`
+          : `${newMessages} new messages · ${accountName} (${platformLabel})`
     }
 
     const notification = new Notification({
-      title: `${accountName} (${platformLabel})`,
+      title,
       body,
-      silent: !soundEnabled
+      silent: !soundEnabled,
+      ...(this.notificationIcon.isEmpty() ? {} : { icon: this.notificationIcon })
     })
+
+    const target: NotificationTarget = {
+      accountId,
+      chatLabel: resolvedChatLabel
+    }
+
+    this.liveNotifications.add(notification)
+    this.notificationTargets.set(notification, target)
+
+    const release = (): void => {
+      this.liveNotifications.delete(notification)
+      this.notificationTargets.delete(notification)
+    }
 
     notification.on('click', () => {
-      const mainWindow = this.deps.getMainWindow()
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) {
-          mainWindow.restore()
-        }
-        mainWindow.show()
-        mainWindow.focus()
-      }
-
-      const viewManager = this.deps.getViewManager()
-      viewManager?.setOverlayActive(false, accountId)
-      this.deps.onOpenAccount(accountId)
+      const clickTarget = this.notificationTargets.get(notification) ?? target
+      release()
+      notification.close()
+      void this.handleNotificationClick(clickTarget.accountId, clickTarget.chatLabel)
     })
 
+    notification.on('close', release)
+    notification.on('failed', release)
+
     notification.show()
+  }
+
+  private async handleNotificationClick(accountId: string, chatLabel: string | null): Promise<void> {
+    this.deps.showMainWindow()
+
+    const viewManager = this.deps.getViewManager()
+    const mainWindow = this.deps.getMainWindow()
+
+    viewManager?.setOverlayActive(false, accountId)
+    viewManager?.showView(accountId)
+    this.deps.onOpenAccount(accountId, chatLabel)
+
+    await this.waitForWindowReady(mainWindow)
+
+    mainWindow?.webContents.send('window:resized')
+    await new Promise((resolve) => setTimeout(resolve, 250))
+
+    const tracked = this.trackedViews.get(accountId)
+    if (!tracked || tracked.view.webContents.isDestroyed()) {
+      return
+    }
+
+    await focusChatWithRetry(tracked.view.webContents, tracked.platform, chatLabel)
+    viewManager?.focusActiveView()
+    mainWindow?.focus()
+  }
+
+  private async waitForWindowReady(mainWindow: BrowserWindow | null): Promise<void> {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return
+    }
+
+    if (mainWindow.isVisible()) {
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      return
+    }
+
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(resolve, 800)
+      mainWindow.once('show', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+    })
   }
 }

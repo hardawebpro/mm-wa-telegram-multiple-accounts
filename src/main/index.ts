@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron'
+import { APP_NAME } from '@shared/constants/app'
 import { MessagingViewManager } from './messaging/MessagingViewManager'
 import { AccountsStore } from './store/accounts'
 import { SettingsStore, UiStateStore } from './store/settings'
@@ -66,8 +67,9 @@ function createWindow(): void {
     getMainWindow: () => mainWindow,
     getViewManager: () => viewManager,
     accountsStore,
-    onOpenAccount: (accountId) => {
-      mainWindow?.webContents.send('notification:open-account', { accountId })
+    showMainWindow: () => trayManager?.showMainWindow(),
+    onOpenAccount: (accountId, chatLabel) => {
+      mainWindow?.webContents.send('notification:open-account', { accountId, chatLabel })
     },
     onUnreadChanged: (accountId, unreadCount) => {
       mainWindow?.webContents.send('account:unread-changed', { accountId, unreadCount })
@@ -111,6 +113,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  app.setName(APP_NAME)
+
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.jbs.mm-wa-telegram-multiple-accounts')
   }

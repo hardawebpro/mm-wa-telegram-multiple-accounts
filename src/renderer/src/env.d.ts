@@ -38,7 +38,7 @@ export interface MmwaApi {
     openExternal: (url: string) => Promise<IpcResponse<void>>
     onWindowResized: (callback: () => void) => () => void
     onUnreadChanged: (callback: (payload: { accountId: string; unreadCount: number }) => void) => () => void
-    onOpenAccount: (callback: (payload: { accountId: string }) => void) => () => void
+    onOpenAccount: (callback: (payload: { accountId: string; chatLabel?: string | null }) => void) => () => void
   }
 }
 

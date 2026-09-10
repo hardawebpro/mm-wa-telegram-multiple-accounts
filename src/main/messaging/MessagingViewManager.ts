@@ -1,6 +1,7 @@
 import { BrowserWindow, WebContentsView, shell } from 'electron'
 import { ALLOWED_PLATFORM_ORIGINS, getPlatformUrl } from '@shared/constants/platformUrls'
 import { MESSAGING_USER_AGENT } from '@shared/constants/messaging'
+import { BLOCK_WEB_NOTIFICATIONS_SCRIPT } from '../notifications/blockWebNotifications'
 import type { MessagingAccount, Platform, ViewBounds } from '@shared/types'
 
 const MESSAGING_WEB_PREFERENCES = {
@@ -42,6 +43,7 @@ export class MessagingViewManager {
 
     view.webContents.setUserAgent(MESSAGING_USER_AGENT)
     this.setupNavigationGuard(view, account.platform)
+    this.setupNotificationBlocker(view)
     this.setupLoadHandlers(view, account.id)
 
     this.views.set(account.id, view)
@@ -303,6 +305,19 @@ export class MessagingViewManager {
       width: Math.max(0, width - sidebarWidth),
       height: Math.max(0, height - tabHeight)
     }
+  }
+
+  private setupNotificationBlocker(view: WebContentsView): void {
+    const inject = (): void => {
+      if (view.webContents.isDestroyed()) {
+        return
+      }
+      void view.webContents.executeJavaScript(BLOCK_WEB_NOTIFICATIONS_SCRIPT, true).catch(() => {
+        // Ignore injection failures on transient blank pages.
+      })
+    }
+
+    view.webContents.on('dom-ready', inject)
   }
 
   private setupLoadHandlers(view: WebContentsView, accountId: string): void {
