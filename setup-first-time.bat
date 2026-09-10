@@ -58,7 +58,9 @@ if not exist "start-app.vbs" (
   exit /b 1
 )
 
-echo Creating Desktop shortcut / Membuat shortcut Desktop...
+echo Creating shortcuts / Membuat shortcut...
+echo - Desktop shortcut
+echo - Start Menu shortcut ^(Windows notification display name^)
 call "%~dp0create-desktop-shortcut.bat"
 if errorlevel 1 (
   echo.
@@ -70,8 +72,11 @@ if errorlevel 1 (
 
 echo.
 echo Setup complete / Setup selesai.
-echo Use the Desktop shortcut to launch the app next time.
-echo Gunakan shortcut Desktop untuk menjalankan app berikutnya.
+echo Launch from Desktop or Start Menu shortcut next time.
+echo Jalankan dari shortcut Desktop atau Start Menu berikutnya.
+echo.
+echo If Windows notifications still show com.jbs... at the top, log out and back in once.
+echo Jika notifikasi masih menampilkan com.jbs... di atas, logout/login Windows sekali.
 echo.
 
 endlocal

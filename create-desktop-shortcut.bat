@@ -2,47 +2,35 @@
 setlocal EnableExtensions
 
 set "APP_NAME=MM WA Telegram Multiple Accounts"
+set "APP_USER_MODEL_ID=com.jbs.mm-wa-telegram-multiple-accounts"
 set "PROJECT_DIR=%~dp0"
-set "TARGET=%PROJECT_DIR%start-app.vbs"
-set "SHORTCUT=%USERPROFILE%\Desktop\%APP_NAME%.lnk"
+set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
 
-if exist "%PROJECT_DIR%resources\256.ico" (
-  set "ICON=%PROJECT_DIR%resources\256.ico"
-) else if exist "%PROJECT_DIR%resources\256.png" (
-  set "ICON=%PROJECT_DIR%resources\256.png"
-) else (
-  echo [ERROR] Icon not found in resources\ / Icon tidak ditemukan di resources\
+if not exist "%PROJECT_DIR%\start-app.vbs" (
+  echo [ERROR] start-app.vbs not found in project folder.
   pause
   exit /b 1
 )
 
-if not exist "%TARGET%" (
-  echo [ERROR] start-app.vbs not found at: %TARGET%
+if not exist "%PROJECT_DIR%\scripts\create-windows-shortcuts.ps1" (
+  echo [ERROR] scripts\create-windows-shortcuts.ps1 not found.
   pause
   exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$shell = New-Object -ComObject WScript.Shell;" ^
-  "$shortcut = $shell.CreateShortcut('%SHORTCUT%');" ^
-  "$shortcut.TargetPath = '%TARGET%';" ^
-  "$shortcut.WorkingDirectory = '%PROJECT_DIR%';" ^
-  "$shortcut.IconLocation = '%ICON%,0';" ^
-  "$shortcut.Description = 'Manage multiple WhatsApp and Telegram accounts';" ^
-  "$shortcut.Save()"
-
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PROJECT_DIR%\scripts\create-windows-shortcuts.ps1" -ProjectDir "%PROJECT_DIR%" -AppName "%APP_NAME%" -AppUserModelId "%APP_USER_MODEL_ID%"
 if errorlevel 1 (
-  echo [ERROR] Failed to create shortcut / Gagal membuat shortcut.
-  echo See docs/HOW_TO_USE for manual shortcut steps in File Explorer.
+  echo [ERROR] Failed to create shortcuts / Gagal membuat shortcut.
   pause
   exit /b 1
 )
 
 echo.
-echo Shortcut created / Shortcut berhasil dibuat:
-echo %SHORTCUT%
+echo Shortcuts created / Shortcut berhasil dibuat:
+echo - Desktop
+echo - Start Menu ^(for proper Windows notification name^)
 echo.
-echo Double-click the Desktop shortcut to launch the app.
-echo Double-click shortcut Desktop untuk menjalankan aplikasi.
+echo Launch the app from either shortcut after setup.
+echo Jalankan app dari shortcut Desktop atau Start Menu setelah setup.
 
 endlocal

@@ -2,6 +2,8 @@ import packageJson from '../../../package.json'
 
 export const APP_NAME = 'MM WA Telegram Multiple Accounts'
 
+export const APP_USER_MODEL_ID = 'com.jbs.mm-wa-telegram-multiple-accounts'
+
 export const APP_VERSION = packageJson.version
 
 function formatVersionLabel(version: string): string {

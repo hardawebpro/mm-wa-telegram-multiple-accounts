@@ -1,5 +1,5 @@
 import { app, BrowserWindow } from 'electron'
-import { APP_NAME } from '@shared/constants/app'
+import { APP_NAME, APP_USER_MODEL_ID } from '@shared/constants/app'
 import { MessagingViewManager } from './messaging/MessagingViewManager'
 import { AccountsStore } from './store/accounts'
 import { SettingsStore, UiStateStore } from './store/settings'
@@ -116,7 +116,7 @@ app.whenReady().then(() => {
   app.setName(APP_NAME)
 
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.jbs.mm-wa-telegram-multiple-accounts')
+    app.setAppUserModelId(APP_USER_MODEL_ID)
   }
 
   createApplicationMenu()
