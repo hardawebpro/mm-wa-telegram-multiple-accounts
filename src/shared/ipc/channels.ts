@@ -14,7 +14,8 @@ export const IPC_CHANNELS = {
   SETTINGS_SET: 'settings:set',
   UI_STATE_GET: 'ui-state:get',
   UI_STATE_SET: 'ui-state:set',
-  APP_OPEN_DEVTOOLS: 'app:open-devtools'
+  APP_OPEN_DEVTOOLS: 'app:open-devtools',
+  APP_OPEN_EXTERNAL: 'app:open-external'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

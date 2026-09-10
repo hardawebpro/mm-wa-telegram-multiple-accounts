@@ -29,9 +29,17 @@ function writeJsonFile<T>(filename: string, data: T): void {
   writeFileSync(join(getStoreDir(), filename), JSON.stringify(data, null, 2), 'utf-8')
 }
 
+function mergeAppSettings(stored: AppSettings): AppSettings {
+  return {
+    general: { ...DEFAULT_APP_SETTINGS.general, ...stored.general },
+    appearance: { ...DEFAULT_APP_SETTINGS.appearance, ...stored.appearance }
+  }
+}
+
 export class SettingsStore {
   get(): AppSettings {
-    return readJsonFile('settings.json', DEFAULT_APP_SETTINGS)
+    const stored = readJsonFile('settings.json', DEFAULT_APP_SETTINGS)
+    return mergeAppSettings(stored)
   }
 
   set(settings: AppSettings): void {

@@ -35,6 +35,7 @@ export interface MmwaApi {
   }
   app: {
     openDevTools: () => Promise<IpcResponse<void>>
+    openExternal: (url: string) => Promise<IpcResponse<void>>
     onWindowResized: (callback: () => void) => () => void
     onUnreadChanged: (callback: (payload: { accountId: string; unreadCount: number }) => void) => () => void
     onOpenAccount: (callback: (payload: { accountId: string }) => void) => () => void

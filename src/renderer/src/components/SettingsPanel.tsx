@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { APP_IS_BETA, APP_NAME, APP_VERSION_LABEL } from '@shared/constants/app'
+import { FONT_SIZE_LABELS, FONT_SIZE_PRESETS } from '@shared/constants/appearance'
+import {
+  APP_IS_BETA,
+  APP_NAME,
+  APP_VERSION_LABEL,
+  GITHUB_BUG_REPORT_URL,
+  GITHUB_REPO_URL
+} from '@shared/constants/app'
 import type {
   AccountSettings,
   AppSettings,
+  FontSizePreset,
   MessagingAccount,
   ThemeMode
 } from '@shared/types'
 
-type SettingsSection = 'general' | 'appearance' | 'accounts' | 'advanced'
+type SettingsSection = 'general' | 'appearance' | 'accounts' | 'advanced' | 'about'
 
 interface SettingsPanelProps {
   settings: AppSettings
@@ -26,6 +34,7 @@ const SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: 'general', label: 'General' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'accounts', label: 'Accounts' },
+  { id: 'about', label: 'About' },
   { id: 'advanced', label: 'Advanced' }
 ]
 
@@ -214,6 +223,37 @@ export function SettingsPanel({
                   <option value="compact">Compact sidebar</option>
                 </select>
               </label>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-ink">Font size</legend>
+                <p className="text-xs text-ink-muted">
+                  Application shell text size. Default is S. WhatsApp Web and Telegram Web use their own zoom per
+                  account.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {FONT_SIZE_PRESETS.map((preset) => {
+                    const selected = draft.appearance.fontSize === preset
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            appearance: { ...draft.appearance, fontSize: preset }
+                          })
+                        }
+                        className={`min-w-[3rem] cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          selected
+                            ? 'border-brand bg-brand/10 text-ink'
+                            : 'border-line text-ink-secondary hover:bg-zinc-50 dark:hover:bg-zinc-900'
+                        }`}
+                      >
+                        {FONT_SIZE_LABELS[preset]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
             </div>
           )}
 
@@ -372,12 +412,11 @@ export function SettingsPanel({
             </div>
           )}
 
-          {section === 'advanced' && (
+          {section === 'about' && (
             <div className="max-w-lg space-y-4">
-              <h2 className="text-lg font-medium text-ink">Advanced</h2>
+              <h2 className="text-lg font-medium text-ink">About</h2>
 
-              <div className="space-y-2 rounded-lg border border-line bg-zinc-50 p-4 dark:bg-zinc-900/40">
-                <h3 className="text-sm font-medium text-ink">About</h3>
+              <div className="space-y-3 rounded-lg border border-line bg-zinc-50 p-4 dark:bg-zinc-900/40">
                 <p className="text-sm font-medium text-ink">{APP_NAME}</p>
                 <p className="text-sm text-ink-secondary">Version {APP_VERSION_LABEL}</p>
                 {APP_IS_BETA && (
@@ -394,10 +433,31 @@ export function SettingsPanel({
                   application does not install into Program Files or modify the Windows registry. Launch from the
                   Desktop shortcut or <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">start-app.vbs</code>
                   . WhatsApp and Telegram login sessions are stored in Electron&apos;s isolated profile under your
-                  Windows user account — not in config files inside this folder — which keeps credentials separate
-                  from the portable project files.
+                  Windows user account — not in config files inside this folder.
                 </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => void window.mmwa.app.openExternal(GITHUB_BUG_REPORT_URL)}
+                    className="cursor-pointer rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-[#20bd5a]"
+                  >
+                    Report a bug on GitHub
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void window.mmwa.app.openExternal(GITHUB_REPO_URL)}
+                    className="cursor-pointer rounded-lg border border-line px-4 py-2 text-sm text-ink-secondary hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    View repository
+                  </button>
+                </div>
               </div>
+            </div>
+          )}
+
+          {section === 'advanced' && (
+            <div className="max-w-lg space-y-4">
+              <h2 className="text-lg font-medium text-ink">Advanced</h2>
 
               <p className="text-sm text-ink-secondary">
                 Development tools and reset options. Session data is managed by Electron and stored in your user
@@ -423,7 +483,7 @@ export function SettingsPanel({
                         restoreLastActiveAccount: true,
                         restoreOpenedTabs: true
                       },
-                      appearance: { theme: 'system', sidebarMode: 'expanded' }
+                      appearance: { theme: 'system', sidebarMode: 'expanded', fontSize: 's' as FontSizePreset }
                     })
                   }
                 }}

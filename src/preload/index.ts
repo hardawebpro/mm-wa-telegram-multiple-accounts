@@ -53,6 +53,8 @@ const mmwaApi = {
   },
   app: {
     openDevTools: (): Promise<IpcResponse<void>> => invoke(IPC_CHANNELS.APP_OPEN_DEVTOOLS),
+    openExternal: (url: string): Promise<IpcResponse<void>> =>
+      invoke(IPC_CHANNELS.APP_OPEN_EXTERNAL, { url }),
     onWindowResized: (callback: () => void): (() => void) => {
       const listener = (): void => callback()
       ipcRenderer.on('window:resized', listener)

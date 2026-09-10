@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { IPC_CHANNELS } from '@shared/ipc/channels'
 import type { IpcResponse } from '@shared/types'
 import {
@@ -6,6 +6,7 @@ import {
   accountSettingsSchema,
   appSettingsSchema,
   createAccountSchema,
+  openExternalSchema,
   uiStateSchema,
   updateAccountSchema,
   viewBoundsSchema,
@@ -231,6 +232,17 @@ export function registerIpcHandlers(ctx: IpcContext): void {
       ? viewManager.getView(viewManager.getActiveAccountId()!)
       : undefined
     view?.webContents.openDevTools({ mode: 'detach' })
+    return success(undefined)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.APP_OPEN_EXTERNAL, (_event, raw) => {
+    const parsed = parse(openExternalSchema, raw)
+    if ('ok' in parsed && parsed.ok === false) {
+      return parsed
+    }
+
+    const { url } = parsed as ReturnType<typeof openExternalSchema.parse>
+    void shell.openExternal(url)
     return success(undefined)
   })
 }

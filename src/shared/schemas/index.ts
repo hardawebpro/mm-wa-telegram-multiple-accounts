@@ -58,8 +58,16 @@ export const appSettingsSchema = z.object({
   }),
   appearance: z.object({
     theme: z.enum(['system', 'light', 'dark']),
-    sidebarMode: z.enum(['expanded', 'compact'])
+    sidebarMode: z.enum(['expanded', 'compact']),
+    fontSize: z.enum(['xs', 's', 'm', 'l'])
   })
+})
+
+export const openExternalSchema = z.object({
+  url: z
+    .string()
+    .url()
+    .refine((value) => value.startsWith('https://'), { message: 'Only HTTPS URLs are allowed' })
 })
 
 export const uiStateSchema = z.object({

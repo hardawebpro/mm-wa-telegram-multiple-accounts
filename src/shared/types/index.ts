@@ -28,6 +28,8 @@ export type ThemeMode = 'system' | 'light' | 'dark'
 
 export type SidebarMode = 'expanded' | 'compact'
 
+export type FontSizePreset = 'xs' | 's' | 'm' | 'l'
+
 export interface GeneralSettings {
   launchAtStartup: boolean
   startMinimized: boolean
@@ -40,6 +42,7 @@ export interface GeneralSettings {
 export interface AppearanceSettings {
   theme: ThemeMode
   sidebarMode: SidebarMode
+  fontSize: FontSizePreset
 }
 
 export interface AppSettings {
@@ -108,7 +111,8 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
 
 export const DEFAULT_APPEARANCE_SETTINGS: AppearanceSettings = {
   theme: 'system',
-  sidebarMode: 'expanded'
+  sidebarMode: 'expanded',
+  fontSize: 's'
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {

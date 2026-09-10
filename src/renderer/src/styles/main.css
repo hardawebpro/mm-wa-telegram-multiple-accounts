@@ -24,6 +24,10 @@
     @apply h-full w-full overflow-hidden;
   }
 
+  html {
+    font-size: 14px;
+  }
+
   body {
     @apply bg-canvas text-ink antialiased;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;

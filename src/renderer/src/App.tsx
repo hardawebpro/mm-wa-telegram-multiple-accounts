@@ -5,7 +5,7 @@ import { AddAccountModal } from './components/AddAccountModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useAppData } from './hooks/useAppData'
 import { useContentBounds } from './hooks/useContentBounds'
-import { useTheme } from './hooks/useTheme'
+import { useAppearance } from './hooks/useAppearance'
 
 export default function App(): JSX.Element {
   const {
@@ -34,7 +34,7 @@ export default function App(): JSX.Element {
   const shellInteractive = !addModalOpen && !uiState.settingsOpen
   const { contentRef, reportBounds } = useContentBounds(shellInteractive)
 
-  useTheme(settings.appearance.theme)
+  useAppearance(settings.appearance)
 
   const sidebarMode = uiState.sidebarMode ?? settings.appearance.sidebarMode
 

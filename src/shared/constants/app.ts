@@ -23,3 +23,7 @@ export const APP_VERSION_LABEL = formatVersionLabel(APP_VERSION)
 export const APP_WINDOW_TITLE = `${APP_NAME} - ${APP_VERSION_LABEL}`
 
 export const APP_IS_BETA = /beta/i.test(APP_VERSION)
+
+export const GITHUB_REPO_URL = 'https://github.com/hardawebpro/mm-wa-telegram-multiple-accounts'
+
+export const GITHUB_BUG_REPORT_URL = `${GITHUB_REPO_URL}/issues/new`

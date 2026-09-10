@@ -1,4 +1,5 @@
 import type { MessagingAccount } from '@shared/types'
+import { PlatformIcon } from './PlatformIcon'
 
 interface TabBarProps {
   accounts: MessagingAccount[]
@@ -31,16 +32,21 @@ export function TabBar({
         return (
           <div
             key={account.id}
-            className={`group relative flex max-w-[200px] items-center gap-1 rounded-t-md px-3 py-1.5 text-sm transition-colors ${
+            className={`group relative flex max-w-[220px] items-center gap-1 rounded-t-md px-2 py-1.5 text-sm transition-colors ${
               isActive
                 ? '-mb-px z-10 border border-line border-b-tab-active bg-tab-active font-medium text-ink'
                 : 'border border-transparent bg-transparent text-ink-secondary hover:text-ink'
             }`}
           >
-            <button type="button" className="truncate" onClick={() => onSelectTab(account.id)}>
-              {account.name}
+            <button
+              type="button"
+              className="flex min-w-0 items-center gap-1.5 truncate"
+              onClick={() => onSelectTab(account.id)}
+            >
+              <PlatformIcon platform={account.platform} size="sm" />
+              <span className="truncate">{account.name}</span>
               {unreadCount > 0 && (
-                <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white">
+                <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -48,7 +54,7 @@ export function TabBar({
             <button
               type="button"
               aria-label={`Close ${account.name} tab`}
-              className="ml-1 hidden rounded px-1 text-ink-muted hover:bg-zinc-200 group-hover:inline dark:hover:bg-zinc-700"
+              className="ml-0.5 hidden shrink-0 rounded px-1 text-ink-muted hover:bg-zinc-200 group-hover:inline dark:hover:bg-zinc-700"
               onClick={() => onCloseTab(account.id)}
             >
               ×
