@@ -4,6 +4,12 @@
   <img src="resources/256.png" alt="MM WA Telegram Multiple Accounts application icon" width="96" height="96" />
 </p>
 
+<p align="center">
+  <img src="screenshot.jpg" alt="MM WA Telegram Multiple Accounts dark mode — sidebar, tabs, and WhatsApp Web (demo data)" width="960" />
+</p>
+
+<p align="center"><em>Dark mode (v0.1.0 Beta) — demo contacts and messages only.</em></p>
+
 Desktop application to manage multiple **WhatsApp Personal**, **WhatsApp Business**, and **Telegram** accounts from one window.
 
 This is **not** an official WhatsApp, Meta, or Telegram product. It hosts the official web clients inside isolated Electron sessions on your PC.

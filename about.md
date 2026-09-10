@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="screenshot.jpg" alt="MM WA Telegram Multiple Accounts dark mode — sidebar, account tabs, and WhatsApp Web with demo chat data" width="960" />
+  <img src="./screenshot.jpg" alt="MM WA Telegram Multiple Accounts dark mode — sidebar, account tabs, and WhatsApp Web with demo chat data" width="960" />
 </p>
 
 <p align="center"><em>Screenshot (dark mode, v0.1.0 Beta) — demo contact names and messages only; no real phone numbers.</em></p>
