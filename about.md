@@ -34,7 +34,7 @@ The running application shows the version in:
 
 - the **window title bar** (e.g. `MM WA Telegram Multiple Accounts - 0.1.0 Beta`)
 - the **sidebar footer** (expanded mode)
-- **Settings → Advanced → About**
+- **Settings → About**
 
 ## Portable distribution (no installer)
 
@@ -45,7 +45,9 @@ MM WA Telegram Multiple Accounts is designed as a **portable app** in Phase 1. U
 1. Download or clone the repository and **extract** it to any writable folder (e.g. `Documents\MM-WA-Telegram`, USB drive, or Desktop subfolder).
 2. Install **Node.js LTS** once from [nodejs.org](https://nodejs.org/) if not already present — this is the only system-level dependency.
 3. Run **`setup-first-time.bat`** once in the project folder. It runs `npm install` to download JavaScript dependencies into `node_modules` inside that folder.
-4. Launch the app from the **Desktop shortcut** (created by setup) or **`start-app.vbs`** in the project folder.
+4. Launch the app from the **Desktop shortcut**, **Start Menu shortcut** (both created by setup), or **`start-app.vbs`** in the project folder.
+
+Setup also registers a **Start Menu shortcut** with the Windows **AppUserModelID** (`com.jbs.mm-wa-telegram-multiple-accounts`) so desktop toast notifications display **MM WA Telegram Multiple Accounts** instead of the raw app ID. Re-run `setup-first-time.bat` or `create-desktop-shortcut.bat` after moving the project folder. Launch from a shortcut — not `npm run dev` — for proper notification identity on Windows.
 
 ### Why this is safe and portable
 
@@ -151,7 +153,7 @@ Typical supported WhatsApp Web functions include:
 - documents
 - voice messages
 - contact sharing
-- desktop notifications
+- desktop notifications (native web toasts are disabled in this app; see **Desktop Notifications**)
 - Status viewing
 - Status replies
 - voice and video calls where supported by WhatsApp Web or Telegram Web (see **Voice and Video Calls** below)
@@ -188,6 +190,33 @@ Requirements and limits:
 - **Windows 10+:** Allow microphone and camera for the app in **Settings → Privacy & security → Microphone / Camera** if Windows prompts or blocks access.
 - Call availability still depends on Meta/Telegram, account type, linked-device rules, and region — the application cannot enable calls if the web client does not offer them.
 - Restart the application after changing call permission settings if a call still fails immediately after toggling options.
+
+## Desktop Notifications
+
+Desktop notifications are handled by the **application shell** (`NotificationService`), not by native WhatsApp Web or Telegram Web toasts. Web notification permission inside messaging views is **denied** to avoid duplicate, non-actionable system toasts.
+
+Behavior:
+
+- Unread counts are polled from each account’s web view (title + DOM).
+- When unread increases and the app is hidden, unfocused, or on another account tab, the shell shows a Windows/macOS desktop notification.
+- Per account: **Notifications**, **Sound**, and **Notification preview** (chat name + last message snippet when available).
+- **Click notification:** restore from system tray, switch to the account tab, and open the related chat in the web client when identifiable.
+- Notification preview text is read from the chat list DOM (e.g. WhatsApp `aria-label` on unread rows).
+
+Windows requirements:
+
+- `app.setAppUserModelId('com.jbs.mm-wa-telegram-multiple-accounts')` must match shortcuts created by `setup-first-time.bat` / `create-desktop-shortcut.bat`.
+- Users should **launch from Desktop or Start Menu shortcut** for the correct toast app name (**MM WA Telegram Multiple Accounts**). Launching via `npm run dev` may show the raw AppUserModelID in the toast header.
+
+Implementation files:
+
+```text
+src/main/notifications/NotificationService.ts
+src/main/notifications/unreadMonitor.ts
+src/main/notifications/focusChat.ts
+src/main/notifications/blockWebNotifications.ts
+scripts/create-windows-shortcuts.ps1
+```
 
 ## Custom Application Features
 
@@ -266,12 +295,12 @@ sidebarMode: "expanded" | "compact";
 
 ## Tabs
 
-Each opened WhatsApp account must have its own tab.
+Each opened account must have its own tab with a **platform icon** (WhatsApp green / Telegram blue) beside the account name.
 
 Example:
 
 ```text
-[ Personal ] [ Business ] [ Support ] [+]
+[ WA Personal ] [ WA Business ] [ TG Support ] [+]
 ```
 
 A tab represents one account workspace.
@@ -362,6 +391,7 @@ Settings
 ├── General
 ├── Appearance
 ├── Accounts
+├── About
 └── Advanced
 ```
 
@@ -381,6 +411,7 @@ Settings
 - Dark theme
 - Expanded sidebar
 - Compact sidebar
+- Font size preset: **XS**, **S** (default), **M**, **L** — shell UI only; messaging web clients use their own zoom per account
 
 ### Accounts
 
@@ -390,7 +421,9 @@ Each account may provide:
 - Account Type
 - Avatar/Icon
 - Enabled state
-- Notifications and sound
+- Notifications
+- Sound
+- Notification preview (chat name and message snippet in desktop toast)
 - Voice calls (microphone)
 - Video calls (camera + microphone)
 - Zoom factor
@@ -399,6 +432,13 @@ Each account may provide:
 - Reload
 - Logout
 - Delete
+
+### About
+
+- Application name and version (beta)
+- Portable app explanation
+- **Report a bug on GitHub** (opens issue tracker)
+- View repository link
 
 ### Advanced
 
@@ -416,10 +456,21 @@ Each account can support:
 interface AccountSettings {
   notificationsEnabled: boolean;
   soundEnabled: boolean;
+  notificationPreviewEnabled: boolean;
   voiceCallsEnabled: boolean;
   videoCallsEnabled: boolean;
   zoomFactor: number;
   backgroundMode: "active" | "suspended";
+}
+```
+
+Global appearance settings include:
+
+```ts
+interface AppearanceSettings {
+  theme: "system" | "light" | "dark";
+  sidebarMode: "expanded" | "compact";
+  fontSize: "xs" | "s" | "m" | "l";
 }
 ```
 
@@ -618,8 +669,8 @@ Possible future features:
 - Favorite replies
 - Keyboard shortcuts
 - Searchable templates
-- notification management
-- tray integration
+- enhanced notification management (beyond Phase 1 shell toasts)
+- extended tray integration
 - application auto update
 
 Any feature that interacts with WhatsApp Web or Telegram Web must be designed so it does not bypass platform security, authentication, or service restrictions.
@@ -677,4 +728,6 @@ User-facing guides and repository entry points:
 - [docs/HOW_TO_USE.en.md](docs/HOW_TO_USE.en.md) — step-by-step guide (English)
 - [docs/HOW_TO_USE.id.md](docs/HOW_TO_USE.id.md) — panduan langkah demi langkah (Bahasa Indonesia)
 
-**Public distribution (current):** Beta portable build — users download or clone this repository, install Node.js once, run `setup-first-time.bat`, then launch from the Desktop shortcut. There is no signed `.exe` installer in Phase 1. See **Portable distribution (no installer)** above.
+**Public distribution (current):** Beta portable build — users download or clone this repository, install Node.js once, run `setup-first-time.bat`, then launch from the **Desktop or Start Menu shortcut**. There is no signed `.exe` installer in Phase 1. See **Portable distribution (no installer)** and **Desktop Notifications** above.
+
+**Repository:** [github.com/hardawebpro/mm-wa-telegram-multiple-accounts](https://github.com/hardawebpro/mm-wa-telegram-multiple-accounts) — report bugs via **Settings → About** or GitHub Issues.
