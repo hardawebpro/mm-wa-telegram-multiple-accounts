@@ -48,7 +48,12 @@ const WHATSAPP_UNREAD_SCRIPT = `
   }
 
   let total = 0
-  const rows = document.querySelectorAll('#pane-side [role="listitem"], #pane-side [role="row"]')
+  const pane = document.querySelector('#pane-side') || document.querySelector('[aria-label="Chat list"]')
+  if (!pane) {
+    return 0
+  }
+
+  const rows = pane.querySelectorAll('[role="listitem"], [role="row"], [data-testid="cell-frame-container"]')
   rows.forEach(function(row) {
     const label = row.getAttribute('aria-label') || ''
     const labelMatch = label.match(/(\\d+)\\s*unread/i)
@@ -57,12 +62,20 @@ const WHATSAPP_UNREAD_SCRIPT = `
       return
     }
 
-    const unreadBadge = row.querySelector('[aria-label*="unread" i]')
+    const unreadBadge = row.querySelector('[aria-label*="unread" i], [data-testid="icon-unread-count"]')
     if (unreadBadge) {
+      const badgeLabel = unreadBadge.getAttribute('aria-label') || ''
+      const badgeMatch = badgeLabel.match(/(\\d+)/)
+      if (badgeMatch) {
+        total += parseInt(badgeMatch[1], 10)
+        return
+      }
       const badgeText = (unreadBadge.textContent || '').trim()
       if (/^\\d+$/.test(badgeText)) {
         total += parseInt(badgeText, 10)
+        return
       }
+      total += 1
     }
   })
 
@@ -101,13 +114,26 @@ export interface UnreadChatPreview {
 
 const WHATSAPP_LATEST_UNREAD_SCRIPT = `
 (function() {
+  var pane = document.querySelector('#pane-side') || document.querySelector('[aria-label="Chat list"]');
+  if (!pane) return null;
+
   var rows = Array.prototype.slice.call(
-    document.querySelectorAll('#pane-side [role="listitem"], #pane-side [role="row"], [data-testid="cell-frame-container"]')
+    pane.querySelectorAll('[role="listitem"], [role="row"], [data-testid="cell-frame-container"]')
   );
 
-  function hasUnread(row) {
-    if (row.querySelector('[aria-label*="unread" i], [data-testid="icon-unread-count"]')) return true;
-    return /\\d+\\s*unread/i.test(row.getAttribute('aria-label') || '');
+  function unreadCount(row) {
+    var badge = row.querySelector('[aria-label*="unread" i], [data-testid="icon-unread-count"]');
+    if (badge) {
+      var badgeLabel = badge.getAttribute('aria-label') || '';
+      var badgeMatch = badgeLabel.match(/(\\d+)/);
+      if (badgeMatch) return parseInt(badgeMatch[1], 10);
+      var badgeText = (badge.textContent || '').trim();
+      if (/^\\d+$/.test(badgeText)) return parseInt(badgeText, 10);
+      return 1;
+    }
+    var aria = row.getAttribute('aria-label') || '';
+    var ariaMatch = aria.match(/(\\d+)\\s*unread/i);
+    return ariaMatch ? parseInt(ariaMatch[1], 10) : 0;
   }
 
   function isTimeOrMeta(text) {
@@ -115,67 +141,63 @@ const WHATSAPP_LATEST_UNREAD_SCRIPT = `
     if (/^\\d{1,2}:\\d{2}(\\s*[AP]M)?$/i.test(text)) return true;
     if (/^(yesterday|today|senin|selasa|rabu|kamis|jumat|sabtu|minggu|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i.test(text)) return true;
     if (/^\\d+\\s*unread/i.test(text)) return true;
+    if (/^\\d+$/.test(text)) return true;
     return false;
   }
 
-  function parseAriaLabel(row) {
-    var aria = (row.getAttribute('aria-label') || '').trim();
-    if (!aria) return null;
+  function parseRow(row) {
+    var titled = row.querySelector('span[title][dir="auto"], span[title]');
+    var chatName = titled ? (titled.getAttribute('title') || titled.textContent || '').trim() : '';
+    if (!chatName) {
+      var aria = (row.getAttribute('aria-label') || '').trim();
+      chatName = aria ? aria.split(',')[0].trim() : '';
+    }
+    if (!chatName) return null;
 
-    var parts = aria.split(',').map(function(part) { return part.trim(); }).filter(Boolean);
-    if (parts.length < 2) return null;
-
-    var chatName = parts[0];
+    var ariaParts = (row.getAttribute('aria-label') || '').split(',').map(function(part) {
+      return part.trim();
+    }).filter(Boolean);
     var messagePreview = null;
-
-    for (var i = 1; i < parts.length; i++) {
-      var part = parts[i];
-      if (/\\d+\\s*unread/i.test(part)) continue;
+    for (var p = 1; p < ariaParts.length; p++) {
+      var part = ariaParts[p];
       if (isTimeOrMeta(part)) continue;
       messagePreview = part;
       break;
     }
 
-    return { chatName: chatName, messagePreview: messagePreview };
-  }
-
-  function rowName(row) {
-    var parsed = parseAriaLabel(row);
-    if (parsed && parsed.chatName) return parsed.chatName;
-
-    var span = row.querySelector('span[title][dir="auto"], span[dir="auto"]');
-    var fromSpan = span ? (span.getAttribute('title') || span.textContent || '') : '';
-    return fromSpan.trim();
-  }
-
-  function rowPreview(row, chatName) {
-    var parsed = parseAriaLabel(row);
-    if (parsed && parsed.messagePreview) return parsed.messagePreview;
-
-    var lastMsg = row.querySelector('[data-testid="last-msg"], [data-testid="last-msg-status"]');
-    if (lastMsg) {
-      var fromTestId = (lastMsg.textContent || '').trim();
-      if (fromTestId && fromTestId !== chatName && !isTimeOrMeta(fromTestId)) {
-        return fromTestId;
+    if (!messagePreview) {
+      var lines = (row.innerText || '').split('\\n').map(function(line) {
+        return line.trim();
+      }).filter(Boolean);
+      var previewLines = lines.filter(function(line) {
+        return line !== chatName && !isTimeOrMeta(line);
+      });
+      for (var i = previewLines.length - 1; i >= 0; i--) {
+        var candidate = previewLines[i];
+        if (!isTimeOrMeta(candidate)) {
+          messagePreview = candidate;
+          break;
+        }
       }
     }
 
-    var candidates = row.querySelectorAll('span[dir="ltr"], span[title]');
-    for (var i = 0; i < candidates.length; i++) {
-      var text = (candidates[i].textContent || '').trim();
-      if (!text || text === chatName) continue;
-      if (isTimeOrMeta(text)) continue;
-      if (text.length > 0 && text.length < 300) return text;
+    if (!messagePreview) {
+      var lastMsg = row.querySelector('[data-testid="last-msg"], [data-testid="last-msg-status"]');
+      if (lastMsg) {
+        var fromTestId = (lastMsg.textContent || '').trim();
+        if (fromTestId && fromTestId !== chatName && !isTimeOrMeta(fromTestId)) {
+          messagePreview = fromTestId;
+        }
+      }
     }
 
-    return null;
+    return { chatName: chatName, messagePreview: messagePreview };
   }
 
   for (var i = 0; i < rows.length; i++) {
-    if (!hasUnread(rows[i])) continue;
-    var chatName = rowName(rows[i]);
-    if (!chatName) continue;
-    return { chatName: chatName, messagePreview: rowPreview(rows[i], chatName) };
+    if (unreadCount(rows[i]) <= 0) continue;
+    var parsed = parseRow(rows[i]);
+    if (parsed && parsed.chatName) return parsed;
   }
   return null;
 })()
@@ -261,11 +283,19 @@ export async function pollLatestUnreadChat(
   }
 }
 
+export interface PollLatestUnreadChatOptions {
+  maxAttempts?: number
+  /** Extra delay between attempts when the shell window is hidden (e.g. system tray). */
+  backgroundMode?: boolean
+}
+
 export async function pollLatestUnreadChatWithRetry(
   webContents: WebContents,
   platform: Platform,
-  maxAttempts = 5
+  options: PollLatestUnreadChatOptions = {}
 ): Promise<UnreadChatPreview | null> {
+  const maxAttempts = options.maxAttempts ?? 5
+  const backgroundMode = options.backgroundMode ?? false
   let best: UnreadChatPreview | null = null
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -278,7 +308,9 @@ export async function pollLatestUnreadChatWithRetry(
     }
 
     if (attempt < maxAttempts - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 200 + attempt * 150))
+      const baseDelay = backgroundMode ? 350 : 200
+      const stepDelay = backgroundMode ? 250 : 150
+      await new Promise((resolve) => setTimeout(resolve, baseDelay + attempt * stepDelay))
     }
   }
 

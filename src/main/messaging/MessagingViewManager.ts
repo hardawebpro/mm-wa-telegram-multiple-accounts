@@ -42,6 +42,7 @@ export class MessagingViewManager {
     })
 
     view.webContents.setUserAgent(MESSAGING_USER_AGENT)
+    view.webContents.setBackgroundThrottling(false)
     this.setupNavigationGuard(view, account.platform)
     this.setupNotificationBlocker(view)
     this.setupLoadHandlers(view, account.id)
@@ -158,6 +159,16 @@ export class MessagingViewManager {
 
   getView(accountId: string): WebContentsView | undefined {
     return this.views.get(accountId)
+  }
+
+  /** Keeps a messaging view attached so background DOM polling works while the shell is hidden. */
+  ensureViewAttached(accountId: string): void {
+    const view = this.views.get(accountId)
+    if (!view || this.overlayActive) {
+      return
+    }
+
+    this.ensureAttached(view)
   }
 
   resizeActiveView(bounds: ViewBounds): void {

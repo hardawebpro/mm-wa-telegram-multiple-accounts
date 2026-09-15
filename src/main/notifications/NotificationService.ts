@@ -1,9 +1,9 @@
-import { Notification, BrowserWindow, nativeImage } from 'electron'
+import { Notification, BrowserWindow } from 'electron'
 import type { WebContentsView } from 'electron'
 import type { AccountsStore } from '../store/accounts'
 import type { MessagingViewManager } from '../messaging/MessagingViewManager'
 import type { Platform } from '@shared/types'
-import { getResourceIconPath } from '../utils/icons'
+import { getPlatformNotificationIcon } from '../utils/icons'
 import { focusChatWithRetry } from './focusChat'
 import {
   extractPreviewFromTitle,
@@ -48,7 +48,6 @@ export class NotificationService {
   private readonly liveNotifications = new Set<Notification>()
   private readonly notificationTargets = new Map<Notification, NotificationTarget>()
   private pollTimer: ReturnType<typeof setInterval> | null = null
-  private readonly notificationIcon = nativeImage.createFromPath(getResourceIconPath(256))
 
   constructor(private readonly deps: NotificationServiceDeps) {
     this.startPolling()
@@ -223,12 +222,16 @@ export class NotificationService {
   private scheduleNotification(accountId: string): void {
     this.clearPendingNotification(accountId)
 
+    const mainWindow = this.deps.getMainWindow()
+    const windowHidden = !(mainWindow?.isVisible() ?? false)
+    const debounceMs = windowHidden ? 1200 : NOTIFICATION_DEBOUNCE_MS
+
     this.pendingNotifyTimers.set(
       accountId,
       setTimeout(() => {
         this.pendingNotifyTimers.delete(accountId)
         void this.flushNotification(accountId)
-      }, NOTIFICATION_DEBOUNCE_MS)
+      }, debounceMs)
     )
   }
 
@@ -266,10 +269,15 @@ export class NotificationService {
     const newMessages = normalizedCount - baseline
     this.notificationBaselineByAccount.set(accountId, normalizedCount)
 
+    const windowHidden = !(mainWindow?.isVisible() ?? false)
+    viewManager?.ensureViewAttached(accountId)
     const tracked = this.trackedViews.get(accountId)
     const latestChat =
       tracked && !tracked.view.webContents.isDestroyed()
-        ? await pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform)
+        ? await pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform, {
+            maxAttempts: windowHidden ? 10 : 6,
+            backgroundMode: windowHidden
+          })
         : null
 
     const titleFromPage = this.pendingNotifyTitle.get(accountId)
@@ -299,7 +307,7 @@ export class NotificationService {
 
   private showNotification(
     accountName: string,
-    platform: string,
+    platform: Platform,
     newMessages: number,
     accountId: string,
     soundEnabled: boolean,
@@ -337,11 +345,12 @@ export class NotificationService {
           : `${newMessages} new messages · ${accountName} (${platformLabel})`
     }
 
+    const notificationIcon = getPlatformNotificationIcon(platform)
     const notification = new Notification({
       title,
       body,
       silent: !soundEnabled,
-      ...(this.notificationIcon.isEmpty() ? {} : { icon: this.notificationIcon })
+      ...(notificationIcon.isEmpty() ? {} : { icon: notificationIcon })
     })
 
     const target: NotificationTarget = {
@@ -371,28 +380,64 @@ export class NotificationService {
   }
 
   private async handleNotificationClick(accountId: string, chatLabel: string | null): Promise<void> {
-    this.deps.showMainWindow()
-
     const viewManager = this.deps.getViewManager()
     const mainWindow = this.deps.getMainWindow()
+
+    this.deps.showMainWindow()
+    await this.waitForWindowReady(mainWindow)
 
     viewManager?.setOverlayActive(false, accountId)
     viewManager?.showView(accountId)
     this.deps.onOpenAccount(accountId, chatLabel)
 
-    await this.waitForWindowReady(mainWindow)
+    await this.waitForMessagingSurface(accountId)
 
     mainWindow?.webContents.send('window:resized')
-    await new Promise((resolve) => setTimeout(resolve, 250))
+    await new Promise((resolve) => setTimeout(resolve, 400))
 
     const tracked = this.trackedViews.get(accountId)
     if (!tracked || tracked.view.webContents.isDestroyed()) {
       return
     }
 
-    await focusChatWithRetry(tracked.view.webContents, tracked.platform, chatLabel)
+    let resolvedChatLabel = chatLabel?.trim() || null
+    if (!resolvedChatLabel) {
+      const latest = await pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform, {
+        maxAttempts: 8,
+        backgroundMode: false
+      })
+      resolvedChatLabel = latest?.chatName ?? this.pendingNotifyChatLabel.get(accountId) ?? null
+    }
+
+    await focusChatWithRetry(tracked.view.webContents, tracked.platform, resolvedChatLabel, 10)
     viewManager?.focusActiveView()
     mainWindow?.focus()
+  }
+
+  private async waitForMessagingSurface(accountId: string): Promise<void> {
+    const tracked = this.trackedViews.get(accountId)
+    if (!tracked || tracked.view.webContents.isDestroyed()) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return
+    }
+
+    const readyScript =
+      tracked.platform === 'telegram'
+        ? `Boolean(document.querySelector('.chatlist, .ChatFolders, #LeftColumn'))`
+        : `Boolean(document.querySelector('#pane-side, [aria-label="Chat list"]'))`
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        const ready = await tracked.view.webContents.executeJavaScript(readyScript, true)
+        if (ready && !tracked.view.webContents.isLoading()) {
+          return
+        }
+      } catch {
+        // Retry until the messaging surface is ready after tray restore.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100 + attempt * 50))
+    }
   }
 
   private async waitForWindowReady(mainWindow: BrowserWindow | null): Promise<void> {
@@ -407,7 +452,7 @@ export class NotificationService {
     }
 
     await new Promise<void>((resolve) => {
-      const timeout = setTimeout(resolve, 800)
+      const timeout = setTimeout(resolve, 1200)
       mainWindow.once('show', () => {
         clearTimeout(timeout)
         resolve()

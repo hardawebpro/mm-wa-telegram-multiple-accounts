@@ -9,7 +9,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build && node scripts/copy-resources.mjs",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "generate:icons": "node scripts/generate-platform-icons.mjs"
   },
   "dependencies": {
     "uuid": "^11.1.0",

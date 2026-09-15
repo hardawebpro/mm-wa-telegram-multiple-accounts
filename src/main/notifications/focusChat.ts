@@ -61,20 +61,23 @@ function buildFocusChatScript(platform: Platform, chatLabel: string | null): str
   }
 
   var target = normalize(label);
+  var pane = document.querySelector('#pane-side') || document.querySelector('[aria-label="Chat list"]');
+  if (!pane) return false;
+
   var rows = Array.prototype.slice.call(
-    document.querySelectorAll('#pane-side [role="listitem"], #pane-side [role="row"]')
+    pane.querySelectorAll('[role="listitem"], [role="row"], [data-testid="cell-frame-container"]')
   );
 
   function rowName(row) {
-    var span = row.querySelector('span[title][dir="auto"], span[dir="auto"]');
-    var fromSpan = span ? (span.getAttribute('title') || span.textContent || '') : '';
+    var titled = row.querySelector('span[title][dir="auto"], span[title]');
+    var fromTitle = titled ? (titled.getAttribute('title') || titled.textContent || '') : '';
     var aria = row.getAttribute('aria-label') || '';
     var fromAria = aria.split(',')[0] || '';
-    return normalize(fromSpan || fromAria);
+    return normalize(fromTitle || fromAria);
   }
 
   function hasUnread(row) {
-    if (row.querySelector('[aria-label*="unread" i]')) {
+    if (row.querySelector('[aria-label*="unread" i], [data-testid="icon-unread-count"]')) {
       return true;
     }
     return /\\d+\\s*unread/i.test(row.getAttribute('aria-label') || '');
@@ -82,8 +85,12 @@ function buildFocusChatScript(platform: Platform, chatLabel: string | null): str
 
   function openRow(row) {
     var focusable = row.querySelector('[tabindex="-1"], [tabindex="0"]') || row;
-    focusable.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    focusable.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+    focusable.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
     focusable.click();
+    if (typeof focusable.focus === 'function') {
+      focusable.focus();
+    }
     return true;
   }
 
