@@ -19,6 +19,8 @@ export class MessagingViewManager {
   private activeAccountId: string | null = null
   private contentBounds: ViewBounds = { x: 0, y: 0, width: 0, height: 0 }
   private overlayActive = false
+  /** When false (tray-hidden window), all views stay visible so WA/TG keep syncing. */
+  private shellVisible = true
 
   constructor(
     private readonly getMainWindow: () => BrowserWindow | null,
@@ -192,6 +194,24 @@ export class MessagingViewManager {
     return this.activeAccountId
   }
 
+  isShellVisible(): boolean {
+    return this.shellVisible
+  }
+
+  setShellVisible(visible: boolean): void {
+    if (this.shellVisible === visible) {
+      return
+    }
+
+    this.shellVisible = visible
+
+    if (this.overlayActive) {
+      return
+    }
+
+    this.applyVisibility()
+  }
+
   async restoreViews(accounts: MessagingAccount[]): Promise<void> {
     for (const account of accounts) {
       if (account.enabled) {
@@ -210,14 +230,16 @@ export class MessagingViewManager {
 
       const isActive = id === this.activeAccountId
       view.setBounds(bounds)
-      view.setVisible(isActive)
+      view.setVisible(this.shellVisible ? isActive : true)
     }
 
     if (this.activeAccountId) {
       const active = this.views.get(this.activeAccountId)
       if (active && this.attachedViews.has(active)) {
         this.raiseView(active)
-        this.focusActiveView()
+        if (this.shellVisible) {
+          this.focusActiveView()
+        }
       }
     }
   }
@@ -346,13 +368,7 @@ export class MessagingViewManager {
       }
 
       this.ensureAttached(view)
-      view.setBounds(this.getEffectiveBounds())
-      view.setVisible(this.activeAccountId === accountId)
-
-      if (this.activeAccountId === accountId) {
-        this.raiseView(view)
-        this.focusActiveView()
-      }
+      this.applyVisibility()
     })
   }
 

@@ -249,3 +249,4 @@ Not on roadmap unless product decision changes:
 | Date       | Change                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------ |
 | 2026-03-15 | Initial roadmap: Answer Helper concept, AI deferred, about.md gap analysis vs `0.1.0-beta` |
+| 2026-03-22 | Tray notification fix: shell-visible views, wake polling, catch-up coalescing |

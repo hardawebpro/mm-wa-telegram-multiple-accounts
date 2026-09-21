@@ -23,17 +23,23 @@ export function parseUnreadCountFromTitle(title: string): number {
   return 0
 }
 
+const GENERIC_MESSAGING_TITLE = /^(whatsapp|whatsapp business|telegram)$/i
+
+export function isGenericMessagingTitle(label: string | null | undefined): boolean {
+  if (!label) {
+    return true
+  }
+
+  return GENERIC_MESSAGING_TITLE.test(label.trim())
+}
+
 export function extractPreviewFromTitle(title: string): string | null {
   if (!title) {
     return null
   }
 
   const cleaned = title.replace(/^\(\d+\+?\)\s*/, '').trim()
-  if (!cleaned) {
-    return null
-  }
-
-  if (/^whatsapp$/i.test(cleaned) || /^telegram$/i.test(cleaned)) {
+  if (!cleaned || isGenericMessagingTitle(cleaned)) {
     return null
   }
 
@@ -191,6 +197,34 @@ const WHATSAPP_LATEST_UNREAD_SCRIPT = `
       }
     }
 
+    if (!messagePreview) {
+      var secondary = row.querySelector('[data-testid="cell-frame-secondary"]');
+      if (secondary) {
+        var secondaryLines = (secondary.innerText || '').split('\\n').map(function(line) {
+          return line.trim();
+        }).filter(Boolean);
+        for (var s = 0; s < secondaryLines.length; s++) {
+          var secondaryLine = secondaryLines[s];
+          if (secondaryLine !== chatName && !isTimeOrMeta(secondaryLine)) {
+            messagePreview = secondaryLine;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!messagePreview) {
+      var spans = row.querySelectorAll('span[dir="auto"], span[dir="ltr"]');
+      for (var j = 0; j < spans.length; j++) {
+        var span = spans[j];
+        var spanText = (span.textContent || '').trim();
+        if (!spanText || spanText === chatName || isTimeOrMeta(spanText)) continue;
+        if (span.getAttribute('title') === chatName) continue;
+        messagePreview = spanText;
+        break;
+      }
+    }
+
     return { chatName: chatName, messagePreview: messagePreview };
   }
 
@@ -287,6 +321,8 @@ export interface PollLatestUnreadChatOptions {
   maxAttempts?: number
   /** Extra delay between attempts when the shell window is hidden (e.g. system tray). */
   backgroundMode?: boolean
+  /** Stop retrying after this many milliseconds (returns best result so far). */
+  maxWaitMs?: number
 }
 
 export async function pollLatestUnreadChatWithRetry(
@@ -296,9 +332,15 @@ export async function pollLatestUnreadChatWithRetry(
 ): Promise<UnreadChatPreview | null> {
   const maxAttempts = options.maxAttempts ?? 5
   const backgroundMode = options.backgroundMode ?? false
+  const maxWaitMs = options.maxWaitMs
+  const startedAt = Date.now()
   let best: UnreadChatPreview | null = null
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (maxWaitMs !== undefined && Date.now() - startedAt >= maxWaitMs) {
+      break
+    }
+
     const current = await pollLatestUnreadChat(webContents, platform)
     if (current) {
       best = current
@@ -308,9 +350,13 @@ export async function pollLatestUnreadChatWithRetry(
     }
 
     if (attempt < maxAttempts - 1) {
-      const baseDelay = backgroundMode ? 350 : 200
-      const stepDelay = backgroundMode ? 250 : 150
-      await new Promise((resolve) => setTimeout(resolve, baseDelay + attempt * stepDelay))
+      const baseDelay = backgroundMode ? 300 : 200
+      const stepDelay = backgroundMode ? 200 : 150
+      const delayMs = baseDelay + attempt * stepDelay
+      if (maxWaitMs !== undefined && Date.now() - startedAt + delayMs >= maxWaitMs) {
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
   }
 

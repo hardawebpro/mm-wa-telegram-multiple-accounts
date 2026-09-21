@@ -3,13 +3,19 @@ import { APP_WINDOW_TITLE } from '@shared/constants/app'
 import type { AppSettings } from '@shared/types'
 import { getTrayIcon } from '../utils/icons'
 
+export interface TrayManagerCallbacks {
+  onShellHidden?: () => void
+  onShellShown?: () => void
+}
+
 export class TrayManager {
   private tray: Tray | null = null
   private isQuitting = false
 
   constructor(
     private readonly getMainWindow: () => BrowserWindow | null,
-    private readonly getSettings: () => AppSettings
+    private readonly getSettings: () => AppSettings,
+    private readonly callbacks: TrayManagerCallbacks = {}
   ) {}
 
   init(): void {
@@ -91,6 +97,7 @@ export class TrayManager {
 
   private hideToTray(window: BrowserWindow): void {
     this.ensureTray()
+    this.callbacks.onShellHidden?.()
     window.setSkipTaskbar(true)
     window.hide()
   }
@@ -107,5 +114,6 @@ export class TrayManager {
     }
     window.show()
     window.focus()
+    this.callbacks.onShellShown?.()
   }
 }

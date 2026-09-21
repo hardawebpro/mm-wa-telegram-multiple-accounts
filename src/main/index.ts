@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, powerMonitor } from 'electron'
 import { APP_NAME, APP_USER_MODEL_ID } from '@shared/constants/app'
 import { MessagingViewManager } from './messaging/MessagingViewManager'
 import { AccountsStore } from './store/accounts'
@@ -59,10 +59,6 @@ async function restoreSession(): Promise<void> {
 function createWindow(): void {
   mainWindow = createMainWindow()
 
-  trayManager = new TrayManager(() => mainWindow, () => settingsStore.get())
-  trayManager.init()
-  trayManager.attachToWindow(mainWindow)
-
   notificationService = new NotificationService({
     getMainWindow: () => mainWindow,
     getViewManager: () => viewManager,
@@ -110,7 +106,38 @@ function createWindow(): void {
   mainWindow.on('unmaximize', notifyRendererResize)
   mainWindow.on('enter-full-screen', notifyRendererResize)
   mainWindow.on('leave-full-screen', notifyRendererResize)
+
+  const handleShellHidden = (): void => {
+    viewManager?.setShellVisible(false)
+    notificationService?.onShellHidden()
+  }
+
+  const handleShellShown = (): void => {
+    viewManager?.setShellVisible(true)
+    notificationService?.onShellShown()
+  }
+
+  trayManager = new TrayManager(() => mainWindow, () => settingsStore.get(), {
+    onShellHidden: handleShellHidden,
+    onShellShown: handleShellShown
+  })
+  trayManager.init()
+  trayManager.attachToWindow(mainWindow)
+
+  mainWindow.on('hide', handleShellHidden)
+  mainWindow.on('show', handleShellShown)
+
+  powerMonitor.on('resume', () => {
+    notificationService?.onSystemWake()
+  })
+
+  powerMonitor.on('unlock-screen', () => {
+    notificationService?.onSystemWake()
+  })
 }
+
+app.commandLine.appendSwitch('disable-background-timer-throttling')
+app.commandLine.appendSwitch('disable-renderer-backgrounding')
 
 app.whenReady().then(() => {
   app.setName(APP_NAME)
