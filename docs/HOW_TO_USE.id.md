@@ -147,6 +147,14 @@ Buka **Settings** (ikon gear):
 
 Jika panggilan gagal, aktifkan **Voice calls** / **Video calls** untuk akun tersebut, lalu cek **Windows Settings → Privacy & security → Microphone / Camera** untuk app ini.
 
+### Notifikasi desktop
+
+1. Buka **Settings → Accounts**, pilih akun, lalu aktifkan **Notifications**.
+2. Nyalakan **Notification preview** untuk menampilkan nama kontak dan potongan pesan di toast.
+3. Jalankan app dari **shortcut Desktop atau Start Menu** (bukan `npm run dev`) agar nama app benar di toast Windows.
+4. Tes dari tray: pilih tab akun A → minimize ke tray → kirim pesan ke akun B → badge unread dan toast desktop seharusnya muncul dalam ~5–10 detik.
+5. Jika toast tidak muncul, cek **Windows Settings → System → Notifications** untuk app ini dan matikan Focus Assist.
+
 ---
 
 ## 8. Logout atau hapus akun

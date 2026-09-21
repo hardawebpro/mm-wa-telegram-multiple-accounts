@@ -1,6 +1,6 @@
 # MM WA Telegram Multiple Accounts — Product Roadmap
 
-**Last updated:** 2026-03-15  
+**Last updated:** 2026-09-22  
 **Version context:** `0.1.0-beta`  
 **Canonical spec:** [about.md](../about.md)
 
@@ -173,10 +173,10 @@ Features **shipped** in current beta (`0.1.0-beta`). Mapped to about.md where ap
 
 | ID      | Title                                    | Notes                               |
 | ------- | ---------------------------------------- | ----------------------------------- |
-| DEL-017 | Shell desktop notifications              | Not native WA/TG web toasts         |
+| DEL-017 | Shell desktop notifications              | Not native WA/TG web toasts; tray reliability: poll-driven flush, baseline-safe show, retry on failed toast |
 | DEL-018 | Block web notification permission        | Avoid duplicate toasts              |
 | DEL-019 | Unread badges (sidebar + tabs)           | DOM + title polling                 |
-| DEL-020 | Notification preview per account         | Chat name + message snippet         |
+| DEL-020 | Notification preview per account         | Chat name + message snippet from chat list DOM; works in tray when **Notification preview** enabled |
 | DEL-021 | Notification click → restore + open chat | Tray restore, focus chat with retry |
 | DEL-022 | Platform notification icons              | WA/TG icon on toast body            |
 | DEL-023 | Windows AppUserModelID + shortcuts       | Start Menu / Desktop shortcut setup |
@@ -185,7 +185,7 @@ Features **shipped** in current beta (`0.1.0-beta`). Mapped to about.md where ap
 
 | ID      | Title                   | Notes       |
 | ------- | ----------------------- | ----------- |
-| DEL-024 | Minimize to tray        |             |
+| DEL-024 | Minimize to tray        | TrayManager shell hide/show callbacks + window hide/show handlers |
 | DEL-025 | Close to tray           |             |
 | DEL-026 | System tray icon + menu | Show / Quit |
 
@@ -250,3 +250,4 @@ Not on roadmap unless product decision changes:
 | ---------- | ------------------------------------------------------------------------------------------ |
 | 2026-03-15 | Initial roadmap: Answer Helper concept, AI deferred, about.md gap analysis vs `0.1.0-beta` |
 | 2026-03-22 | Tray notification fix: shell-visible views, wake polling, catch-up coalescing |
+| 2026-09-22 | Tray toast hardening: poll-driven debounce, tray always-notify rule, safe baseline after show, TrayManager callbacks; tray message preview re-enabled with bounded DOM poll |

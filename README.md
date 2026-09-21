@@ -132,10 +132,10 @@ npm run typecheck
 | Blank screen after Add Account | WA Web still loading / overlay | Wait 30s; switch tabs; close Settings/Add Account modal |
 | QR code not showing | Network or WA server | Check internet; refresh; try Reload in account settings |
 | Lost login after restart | Cleared session or deleted partition data | Avoid "Clear session" unless logging out intentionally |
-| No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; turn off Windows Focus Assist |
+| No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; enable **Minimize/Close to tray** if testing from tray; turn off Windows Focus Assist; check **Settings → System → Notifications** for this app; toast may appear ~5–10s after message (tray poll + debounce) |
 | Notification click does nothing | Launched from terminal, not shortcut | Quit app; launch from Desktop or Start Menu shortcut |
 | Toast header shows `com.jbs...` | Windows App ID not registered | Re-run `create-desktop-shortcut.bat` or `setup-first-time.bat`; launch from shortcut; log out/in Windows once if needed |
-| No message preview in toast | Preview disabled or DOM not ready | Enable **Notification preview** in account settings; ensure app was minimized to tray when message arrived |
+| No message preview in toast | Preview disabled or DOM not ready | Enable **Notification preview** in account settings; preview is read from the chat list DOM and may take a few seconds in tray mode; ensure app was minimized to tray when message arrived |
 | Port already in use | Another dev instance running | Close all Electron windows; end task in Task Manager if needed |
 | Generic shortcut icon | PNG used instead of ICO | Ensure `resources\256.ico` exists; re-run shortcut script |
 | Voice/video call blocked | App or Windows permission off | Settings → Accounts: enable Voice/Video calls; Windows Privacy → Microphone/Camera |
@@ -260,10 +260,10 @@ npm run typecheck
 | Layar blank setelah Add Account | WA Web masih load / overlay | Tunggu 30 detik; ganti tab; tutup modal Settings/Add Account |
 | QR tidak muncul | Jaringan / server WA | Cek internet; refresh; coba Reload di pengaturan akun |
 | Login hilang setelah restart | Session di-clear / data partition terhapus | Hindari "Clear session" kecuali logout sengaja |
-| Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; matikan Focus Assist |
+| Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; aktifkan **Minimize/Close to tray** jika tes dari tray; matikan Focus Assist; cek **Settings → System → Notifications** untuk app ini; toast bisa muncul ~5–10 detik setelah pesan (poll tray + debounce) |
 | Klik notifikasi tidak buka app | Launch dari terminal | Quit app; jalankan dari shortcut Desktop atau Start Menu |
 | Header toast masih `com.jbs...` | App ID Windows belum terdaftar | Jalankan ulang `create-desktop-shortcut.bat` atau `setup-first-time.bat`; buka lewat shortcut; logout/login Windows sekali jika perlu |
-| Preview pesan tidak tampil | Preview mati atau DOM belum siap | Aktifkan **Notification preview** di pengaturan akun; pastikan app minimize ke tray saat pesan masuk |
+| Preview pesan tidak tampil | Preview mati atau DOM belum siap | Aktifkan **Notification preview** di pengaturan akun; preview dibaca dari chat list DOM dan bisa butuh beberapa detik di mode tray; pastikan app minimize ke tray saat pesan masuk |
 | Port sudah dipakai | Instance dev masih jalan | Tutup semua jendela Electron; end task di Task Manager jika perlu |
 | Icon shortcut generik | Pakai PNG bukan ICO | Pastikan `resources\256.ico` ada; jalankan ulang script shortcut |
 | Panggilan suara/video gagal | Permission app/Windows mati | Settings → Accounts: aktifkan Voice/Video calls; Windows Privacy → Microphone/Camera |

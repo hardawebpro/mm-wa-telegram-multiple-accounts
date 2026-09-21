@@ -199,7 +199,9 @@ Behavior:
 
 - Unread counts are polled from each account’s web view (title + DOM).
 - When unread increases and the app is hidden, unfocused, or on another account tab, the shell shows a Windows/macOS desktop notification.
+- When the app is in the **system tray**, unread polling continues; desktop toasts are shown for accounts that are not the active tab.
 - Per account: **Notifications**, **Sound**, and **Notification preview** (chat name + last message snippet when available).
+- Message preview (when enabled) is read from the chat list in the web client; availability depends on WhatsApp/Telegram DOM at notification time.
 - **Click notification:** restore from system tray, switch to the account tab, and open the related chat in the web client when identifiable.
 - Notification preview text is read from the chat list DOM (e.g. WhatsApp `aria-label` on unread rows).
 

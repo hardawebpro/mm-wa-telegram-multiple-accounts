@@ -147,6 +147,14 @@ Open **Settings** (gear icon):
 
 If a call fails, enable **Voice calls** / **Video calls** for that account, then check **Windows Settings → Privacy & security → Microphone / Camera** for this app.
 
+### Desktop notifications
+
+1. Open **Settings → Accounts**, select an account, and enable **Notifications**.
+2. Turn on **Notification preview** to show contact name and a message snippet in the toast.
+3. Launch the app from the **Desktop or Start Menu shortcut** (not `npm run dev`) so Windows shows the correct app name on toasts.
+4. To test from tray: select account tab A → minimize to tray → send a message to account B → expect unread badge and a desktop toast within about 5–10 seconds.
+5. If no toast appears, check **Windows Settings → System → Notifications** for this app and turn off Focus Assist.
+
 ---
 
 ## 8. Logout or remove an account
