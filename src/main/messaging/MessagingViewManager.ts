@@ -222,6 +222,8 @@ export class MessagingViewManager {
 
   private applyVisibility(): void {
     const bounds = this.getEffectiveBounds()
+    const mainWindow = this.getMainWindow()
+    const mainWindowVisible = mainWindow?.isVisible() ?? false
 
     for (const [id, view] of this.views) {
       if (!this.attachedViews.has(view)) {
@@ -233,7 +235,7 @@ export class MessagingViewManager {
       view.setVisible(this.shellVisible ? isActive : true)
     }
 
-    if (this.activeAccountId) {
+    if (this.activeAccountId && mainWindowVisible) {
       const active = this.views.get(this.activeAccountId)
       if (active && this.attachedViews.has(active)) {
         this.raiseView(active)
@@ -245,6 +247,11 @@ export class MessagingViewManager {
   }
 
   focusActiveView(): void {
+    const mainWindow = this.getMainWindow()
+    if (!mainWindow?.isVisible() || !this.shellVisible) {
+      return
+    }
+
     if (this.overlayActive || !this.activeAccountId) {
       return
     }

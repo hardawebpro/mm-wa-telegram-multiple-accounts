@@ -132,7 +132,8 @@ npm run typecheck
 | Blank screen after Add Account | WA Web still loading / overlay | Wait 30s; switch tabs; close Settings/Add Account modal |
 | QR code not showing | Network or WA server | Check internet; refresh; try Reload in account settings |
 | Lost login after restart | Cleared session or deleted partition data | Avoid "Clear session" unless logging out intentionally |
-| No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; enable **Minimize/Close to tray** if testing from tray; turn off Windows Focus Assist; check **Settings → System → Notifications** for this app; toast may appear ~5–10s after message (tray poll + debounce) |
+| No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; turn off Windows Focus Assist; check **Settings → System → Notifications** for this app; in background (tray, minimized, or unfocused) toast usually within ~3–5s after message |
+| App already running / second launch does nothing | Single-instance lock | Only one process is allowed; use the existing window or tray icon, or end the old task in Task Manager before starting again |
 | Notification click does nothing | Launched from terminal, not shortcut | Quit app; launch from Desktop or Start Menu shortcut |
 | Toast header shows `com.jbs...` | Windows App ID not registered | Re-run `create-desktop-shortcut.bat` or `setup-first-time.bat`; launch from shortcut; log out/in Windows once if needed |
 | No message preview in toast | Preview disabled or DOM not ready | Enable **Notification preview** in account settings; preview is read from the chat list DOM and may take a few seconds in tray mode; ensure app was minimized to tray when message arrived |
@@ -260,7 +261,8 @@ npm run typecheck
 | Layar blank setelah Add Account | WA Web masih load / overlay | Tunggu 30 detik; ganti tab; tutup modal Settings/Add Account |
 | QR tidak muncul | Jaringan / server WA | Cek internet; refresh; coba Reload di pengaturan akun |
 | Login hilang setelah restart | Session di-clear / data partition terhapus | Hindari "Clear session" kecuali logout sengaja |
-| Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; aktifkan **Minimize/Close to tray** jika tes dari tray; matikan Focus Assist; cek **Settings → System → Notifications** untuk app ini; toast bisa muncul ~5–10 detik setelah pesan (poll tray + debounce) |
+| Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; matikan Focus Assist; cek **Settings → System → Notifications** untuk app ini; saat background (tray, minimize, atau unfocus) toast biasanya ~3–5 detik setelah pesan |
+| App sudah jalan / buka kedua tidak muncul | Single-instance lock | Hanya satu proses; pakai jendela atau icon tray yang ada, atau end task di Task Manager sebelum start lagi |
 | Klik notifikasi tidak buka app | Launch dari terminal | Quit app; jalankan dari shortcut Desktop atau Start Menu |
 | Header toast masih `com.jbs...` | App ID Windows belum terdaftar | Jalankan ulang `create-desktop-shortcut.bat` atau `setup-first-time.bat`; buka lewat shortcut; logout/login Windows sekali jika perlu |
 | Preview pesan tidak tampil | Preview mati atau DOM belum siap | Aktifkan **Notification preview** di pengaturan akun; preview dibaca dari chat list DOM dan bisa butuh beberapa detik di mode tray; pastikan app minimize ke tray saat pesan masuk |

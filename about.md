@@ -199,7 +199,7 @@ Behavior:
 
 - Unread counts are polled from each account’s web view (title + DOM).
 - When unread increases and the app is hidden, unfocused, or on another account tab, the shell shows a Windows/macOS desktop notification.
-- When the app is in the **system tray**, unread polling continues; desktop toasts are shown for accounts that are not the active tab.
+- When the app is in the **system tray**, minimized, or unfocused, unread polling continues and messaging views stay synced; desktop toasts are shown for accounts that are not the active tab.
 - Per account: **Notifications**, **Sound**, and **Notification preview** (chat name + last message snippet when available).
 - Message preview (when enabled) is read from the chat list in the web client; availability depends on WhatsApp/Telegram DOM at notification time.
 - **Click notification:** restore from system tray, switch to the account tab, and open the related chat in the web client when identifiable.
@@ -209,6 +209,7 @@ Windows requirements:
 
 - `app.setAppUserModelId('com.jbs.mm-wa-telegram-multiple-accounts')` must match shortcuts created by `setup-first-time.bat` / `create-desktop-shortcut.bat`.
 - Users should **launch from Desktop or Start Menu shortcut** for the correct toast app name (**MM WA Telegram Multiple Accounts**). Launching via `npm run dev` may show the raw AppUserModelID in the toast header.
+- Only **one application instance** may run at a time; a second launch focuses the existing window (or tray) instead of opening another process.
 
 Implementation files:
 

@@ -18,10 +18,55 @@ let mainWindow: BrowserWindow | null = null
 let viewManager: MessagingViewManager | null = null
 let notificationService: NotificationService | null = null
 let trayManager: TrayManager | null = null
+let pendingSecondInstanceFocus = false
 
 const accountsStore = new AccountsStore()
 const settingsStore = new SettingsStore()
 const uiStateStore = new UiStateStore()
+
+function isMainWindowForeground(): boolean {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return false
+  }
+
+  return mainWindow.isVisible() && mainWindow.isFocused() && !mainWindow.isMinimized()
+}
+
+function updateBackgroundSyncState(): void {
+  if (trayManager?.isHiddenInTray()) {
+    viewManager?.setShellVisible(false)
+    notificationService?.enterBackgroundSync()
+    return
+  }
+
+  if (isMainWindowForeground()) {
+    viewManager?.setShellVisible(true)
+    notificationService?.exitBackgroundSync()
+    return
+  }
+
+  viewManager?.setShellVisible(false)
+  notificationService?.enterBackgroundSync()
+}
+
+function focusExistingWindow(): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    trayManager?.showMainWindow()
+    updateBackgroundSyncState()
+    return
+  }
+
+  pendingSecondInstanceFocus = true
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    focusExistingWindow()
+  })
+}
 
 async function restoreSession(): Promise<void> {
   if (!viewManager) {
@@ -107,25 +152,19 @@ function createWindow(): void {
   mainWindow.on('enter-full-screen', notifyRendererResize)
   mainWindow.on('leave-full-screen', notifyRendererResize)
 
-  const handleShellHidden = (): void => {
-    viewManager?.setShellVisible(false)
-    notificationService?.onShellHidden()
-  }
-
-  const handleShellShown = (): void => {
-    viewManager?.setShellVisible(true)
-    notificationService?.onShellShown()
-  }
-
   trayManager = new TrayManager(() => mainWindow, () => settingsStore.get(), {
-    onShellHidden: handleShellHidden,
-    onShellShown: handleShellShown
+    onShellHidden: () => updateBackgroundSyncState(),
+    onShellShown: () => updateBackgroundSyncState()
   })
   trayManager.init()
   trayManager.attachToWindow(mainWindow)
 
-  mainWindow.on('hide', handleShellHidden)
-  mainWindow.on('show', handleShellShown)
+  mainWindow.on('hide', updateBackgroundSyncState)
+  mainWindow.on('show', updateBackgroundSyncState)
+  mainWindow.on('minimize', updateBackgroundSyncState)
+  mainWindow.on('restore', updateBackgroundSyncState)
+  mainWindow.on('blur', updateBackgroundSyncState)
+  mainWindow.on('focus', updateBackgroundSyncState)
 
   powerMonitor.on('resume', () => {
     notificationService?.onSystemWake()
@@ -134,39 +173,49 @@ function createWindow(): void {
   powerMonitor.on('unlock-screen', () => {
     notificationService?.onSystemWake()
   })
+
+  updateBackgroundSyncState()
+
+  if (pendingSecondInstanceFocus) {
+    pendingSecondInstanceFocus = false
+    focusExistingWindow()
+  }
 }
 
 app.commandLine.appendSwitch('disable-background-timer-throttling')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 
-app.whenReady().then(() => {
-  app.setName(APP_NAME)
+if (gotSingleInstanceLock) {
+  app.whenReady().then(() => {
+    app.setName(APP_NAME)
 
-  if (process.platform === 'win32') {
-    app.setAppUserModelId(APP_USER_MODEL_ID)
-  }
+    if (process.platform === 'win32') {
+      app.setAppUserModelId(APP_USER_MODEL_ID)
+    }
 
-  createApplicationMenu()
-  createWindow()
+    createApplicationMenu()
+    createWindow()
 
-  app.on('before-quit', () => {
-    trayManager?.markQuitting()
-    notificationService?.dispose()
-    trayManager?.dispose()
+    app.on('before-quit', () => {
+      trayManager?.markQuitting()
+      notificationService?.dispose()
+      trayManager?.dispose()
+    })
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+      } else {
+        mainWindow?.show()
+        mainWindow?.focus()
+        updateBackgroundSyncState()
+      }
+    })
   })
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    } else {
-      mainWindow?.show()
-      mainWindow?.focus()
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit()
     }
   })
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+}

@@ -11,6 +11,7 @@ export interface TrayManagerCallbacks {
 export class TrayManager {
   private tray: Tray | null = null
   private isQuitting = false
+  private hiddenInTray = false
 
   constructor(
     private readonly getMainWindow: () => BrowserWindow | null,
@@ -45,6 +46,10 @@ export class TrayManager {
 
   showMainWindow(): void {
     this.revealMainWindow()
+  }
+
+  isHiddenInTray(): boolean {
+    return this.hiddenInTray
   }
 
   dispose(): void {
@@ -97,6 +102,7 @@ export class TrayManager {
 
   private hideToTray(window: BrowserWindow): void {
     this.ensureTray()
+    this.hiddenInTray = true
     this.callbacks.onShellHidden?.()
     window.setSkipTaskbar(true)
     window.hide()
@@ -108,6 +114,7 @@ export class TrayManager {
       return
     }
 
+    this.hiddenInTray = false
     window.setSkipTaskbar(false)
     if (window.isMinimized()) {
       window.restore()

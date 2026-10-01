@@ -33,16 +33,17 @@ interface NotificationServiceDeps {
 }
 
 const POLL_INTERVAL_MS = 2000
-const TRAY_POLL_INTERVAL_MS = 5000
+const BACKGROUND_POLL_INTERVAL_MS = 2000
 const TITLE_REFRESH_DEBOUNCE_MS = 500
 const NOTIFICATION_DEBOUNCE_MS = 800
-const TRAY_NOTIFICATION_DEBOUNCE_MS = 1200
+const BACKGROUND_NOTIFICATION_DEBOUNCE_MS = 1200
 const CATCH_UP_GAP_MS = 60_000
 const CATCH_UP_DEBOUNCE_MS = 4000
 const NOTIFICATION_RATE_LIMIT_MS = 30_000
 const POLL_ACCOUNT_TIMEOUT_MS = 3000
 const CATCH_UP_BATCH_THRESHOLD = 3
-const TRAY_PREVIEW_POLL_MAX_WAIT_MS = 3000
+const BACKGROUND_PREVIEW_POLL_MAX_WAIT_MS = 1000
+const FOREGROUND_PREVIEW_POLL_MAX_WAIT_MS = 1500
 
 export class NotificationService {
   private readonly polledUnreadByAccount = new Map<string, number>()
@@ -61,7 +62,8 @@ export class NotificationService {
   private readonly notificationTargets = new Map<Notification, NotificationTarget>()
   private pollTimer: ReturnType<typeof setInterval> | null = null
   private pollIntervalMs = POLL_INTERVAL_MS
-  private shellHidden = false
+  /** True when window hidden, minimized, or unfocused — faster poll + all-view sync in ViewManager. */
+  private backgroundSync = false
   private loggedUnsupportedNotifications = false
 
   constructor(private readonly deps: NotificationServiceDeps) {
@@ -81,7 +83,7 @@ export class NotificationService {
     view.webContents.on('page-title-updated', (_event, title) => {
       this.pendingNotifyTitle.set(accountId, title)
       this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
-      if (this.shellHidden) {
+      if (this.backgroundSync) {
         void this.refreshAccountUnread(accountId).then(() => {
           this.processPendingNotifications([accountId])
         })
@@ -129,16 +131,34 @@ export class NotificationService {
     this.notificationTargets.clear()
   }
 
-  onShellHidden(): void {
-    this.shellHidden = true
-    this.setPollInterval(TRAY_POLL_INTERVAL_MS)
+  enterBackgroundSync(): void {
+    if (this.backgroundSync) {
+      return
+    }
+
+    this.backgroundSync = true
+    this.setPollInterval(BACKGROUND_POLL_INTERVAL_MS)
     void this.pollAllViews()
   }
 
-  onShellShown(): void {
-    this.shellHidden = false
+  exitBackgroundSync(): void {
+    if (!this.backgroundSync) {
+      return
+    }
+
+    this.backgroundSync = false
     this.setPollInterval(POLL_INTERVAL_MS)
     void this.pollAllViews()
+  }
+
+  /** @deprecated Use enterBackgroundSync — kept for tray hide callback. */
+  onShellHidden(): void {
+    this.enterBackgroundSync()
+  }
+
+  /** @deprecated Use exitBackgroundSync — kept for tray show callback. */
+  onShellShown(): void {
+    this.exitBackgroundSync()
   }
 
   onSystemWake(): void {
@@ -146,7 +166,7 @@ export class NotificationService {
   }
 
   private shouldShowDesktopNotification(accountId: string): boolean {
-    if (this.shellHidden) {
+    if (this.backgroundSync) {
       return true
     }
 
@@ -312,10 +332,6 @@ export class NotificationService {
   }
 
   private isCatchUpGap(accountId: string): boolean {
-    if (this.shellHidden) {
-      return true
-    }
-
     const lastPoll = this.lastSuccessfulPollAt.get(accountId) ?? Date.now()
     return Date.now() - lastPoll > CATCH_UP_GAP_MS
   }
@@ -325,8 +341,8 @@ export class NotificationService {
       return CATCH_UP_DEBOUNCE_MS
     }
 
-    if (this.shellHidden) {
-      return TRAY_NOTIFICATION_DEBOUNCE_MS
+    if (this.backgroundSync) {
+      return BACKGROUND_NOTIFICATION_DEBOUNCE_MS
     }
 
     return NOTIFICATION_DEBOUNCE_MS
@@ -418,9 +434,11 @@ export class NotificationService {
     const latestChat =
       shouldPollPreview && tracked && !tracked.view.webContents.isDestroyed()
         ? await pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform, {
-            maxAttempts: this.shellHidden ? 6 : 6,
-            backgroundMode: this.shellHidden,
-            maxWaitMs: this.shellHidden ? TRAY_PREVIEW_POLL_MAX_WAIT_MS : undefined
+            maxAttempts: 4,
+            backgroundMode: this.backgroundSync,
+            maxWaitMs: this.backgroundSync
+              ? BACKGROUND_PREVIEW_POLL_MAX_WAIT_MS
+              : FOREGROUND_PREVIEW_POLL_MAX_WAIT_MS
           })
         : null
 
