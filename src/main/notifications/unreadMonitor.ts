@@ -363,27 +363,45 @@ export async function pollLatestUnreadChatWithRetry(
   return best
 }
 
-export async function pollUnreadCount(webContents: WebContents, platform: Platform): Promise<number> {
+export interface UnreadSnapshot {
+  unreadCount: number
+  /** `document.visibilityState` of the messaging page, or null when the DOM could not be read. */
+  visibilityState: string | null
+}
+
+export async function pollUnreadSnapshot(
+  webContents: WebContents,
+  platform: Platform
+): Promise<UnreadSnapshot> {
   if (webContents.isDestroyed()) {
-    return 0
+    return { unreadCount: 0, visibilityState: null }
   }
 
   const titleUnread = parseUnreadCountFromTitle(webContents.getTitle())
 
   try {
-    const script = platform === 'telegram' ? TELEGRAM_UNREAD_SCRIPT : WHATSAPP_UNREAD_SCRIPT
-    const domUnread = await webContents.executeJavaScript(script, true)
+    const countScript = platform === 'telegram' ? TELEGRAM_UNREAD_SCRIPT : WHATSAPP_UNREAD_SCRIPT
+    const script = `({ count: ${countScript.trim()}, visibility: document.visibilityState })`
+    const result = (await webContents.executeJavaScript(script, true)) as {
+      count?: unknown
+      visibility?: unknown
+    } | null
+    const visibilityState = typeof result?.visibility === 'string' ? result.visibility : null
+    const domUnread = result?.count
     if (typeof domUnread === 'number' && Number.isFinite(domUnread)) {
       const normalizedDom = Math.max(domUnread, 0)
       // Prefer DOM total when available; fall back to title when DOM returns zero but title has a count.
-      if (normalizedDom > 0) {
-        return normalizedDom
-      }
-      return titleUnread
+      return { unreadCount: normalizedDom > 0 ? normalizedDom : titleUnread, visibilityState }
     }
+    return { unreadCount: titleUnread, visibilityState }
   } catch {
     // Fall back to document title when DOM polling is unavailable.
   }
 
-  return titleUnread
+  return { unreadCount: titleUnread, visibilityState: null }
+}
+
+export async function pollUnreadCount(webContents: WebContents, platform: Platform): Promise<number> {
+  const snapshot = await pollUnreadSnapshot(webContents, platform)
+  return snapshot.unreadCount
 }

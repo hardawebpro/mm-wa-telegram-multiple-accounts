@@ -133,6 +133,7 @@ npm run typecheck
 | QR code not showing | Network or WA server | Check internet; refresh; try Reload in account settings |
 | Lost login after restart | Cleared session or deleted partition data | Avoid "Clear session" unless logging out intentionally |
 | No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; turn off Windows Focus Assist; check **Settings → System → Notifications** for this app; in background (tray, minimized, or unfocused) toast usually within ~3–5s after message |
+| Toasts late or missing while in tray | Messaging page stopped answering checks | Send the log `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` with your bug report. It is local only and contains no chat names, message text, or phone numbers |
 | App already running / second launch does nothing | Single-instance lock | Only one process is allowed; use the existing window or tray icon, or end the old task in Task Manager before starting again |
 | Notification click does nothing | Launched from terminal, not shortcut | Quit app; launch from Desktop or Start Menu shortcut |
 | Toast header shows `com.jbs...` | Windows App ID not registered | Re-run `create-desktop-shortcut.bat` or `setup-first-time.bat`; launch from shortcut; log out/in Windows once if needed |
@@ -262,6 +263,7 @@ npm run typecheck
 | QR tidak muncul | Jaringan / server WA | Cek internet; refresh; coba Reload di pengaturan akun |
 | Login hilang setelah restart | Session di-clear / data partition terhapus | Hindari "Clear session" kecuali logout sengaja |
 | Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; matikan Focus Assist; cek **Settings → System → Notifications** untuk app ini; saat background (tray, minimize, atau unfocus) toast biasanya ~3–5 detik setelah pesan |
+| Toast terlambat atau tidak muncul saat di tray | Halaman WA/TG berhenti merespons pengecekan | Lampirkan log `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` saat melapor bug. Log hanya lokal dan tidak berisi nama chat, isi pesan, atau nomor HP |
 | App sudah jalan / buka kedua tidak muncul | Single-instance lock | Hanya satu proses; pakai jendela atau icon tray yang ada, atau end task di Task Manager sebelum start lagi |
 | Klik notifikasi tidak buka app | Launch dari terminal | Quit app; jalankan dari shortcut Desktop atau Start Menu |
 | Header toast masih `com.jbs...` | App ID Windows belum terdaftar | Jalankan ulang `create-desktop-shortcut.bat` atau `setup-first-time.bat`; buka lewat shortcut; logout/login Windows sekali jika perlu |

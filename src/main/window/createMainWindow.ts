@@ -8,6 +8,7 @@ const SHELL_WEB_PREFERENCES = {
   contextIsolation: true,
   sandbox: true,
   webSecurity: true,
+  backgroundThrottling: false,
   preload: join(__dirname, '../preload/index.js')
 } as const
 

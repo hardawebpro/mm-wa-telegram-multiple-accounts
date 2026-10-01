@@ -8,7 +8,8 @@ const MESSAGING_WEB_PREFERENCES = {
   nodeIntegration: false,
   contextIsolation: true,
   sandbox: true,
-  webSecurity: true
+  webSecurity: true,
+  backgroundThrottling: false
 } as const
 
 const HIDDEN_BOUNDS: ViewBounds = { x: 0, y: 0, width: 0, height: 0 }
