@@ -6,6 +6,7 @@ import { SettingsStore, UiStateStore } from './store/settings'
 import { registerIpcHandlers } from './ipc/registerIpc'
 import { createMainWindow } from './window/createMainWindow'
 import { NotificationService } from './notifications/NotificationService'
+import { logNotificationEvent } from './notifications/notificationLog'
 import { TrayManager } from './tray/TrayManager'
 import { configureMessagingSessionPermissions } from './session/permissions'
 import { createApplicationMenu } from './menu/applicationMenu'
@@ -32,6 +33,10 @@ function isMainWindowForeground(): boolean {
   return mainWindow.isVisible() && mainWindow.isFocused() && !mainWindow.isMinimized()
 }
 
+function accountNotificationsEnabled(accountId: string): boolean {
+  return accountsStore.getSettings(accountId).notificationsEnabled
+}
+
 function updateBackgroundSyncState(): void {
   if (trayManager?.isHiddenInTray()) {
     viewManager?.setShellVisible(false)
@@ -39,14 +44,27 @@ function updateBackgroundSyncState(): void {
     return
   }
 
-  if (isMainWindowForeground()) {
-    viewManager?.setShellVisible(true)
-    notificationService?.exitBackgroundSync()
+  if (!isMainWindowForeground()) {
+    viewManager?.setShellVisible(false)
+    notificationService?.enterBackgroundSync()
     return
   }
 
-  viewManager?.setShellVisible(false)
-  notificationService?.enterBackgroundSync()
+  const multiAccountSync =
+    viewManager?.needsMultiAccountSync(accountNotificationsEnabled) ?? false
+
+  if (multiAccountSync) {
+    const wasShellVisible = viewManager?.isShellVisible() ?? true
+    viewManager?.setShellVisible(false)
+    notificationService?.exitBackgroundSync()
+    if (wasShellVisible) {
+      logNotificationEvent('sync-mode-multi')
+    }
+    return
+  }
+
+  viewManager?.setShellVisible(true)
+  notificationService?.exitBackgroundSync()
 }
 
 function focusExistingWindow(): void {
@@ -133,12 +151,13 @@ function createWindow(): void {
     accountsStore,
     settingsStore,
     uiStateStore,
-    isDev: !app.isPackaged
+    isDev: !app.isPackaged,
+    onMessagingSyncStateChange: () => updateBackgroundSyncState()
   })
 
   registerClipboardShortcuts(() => mainWindow, () => viewManager)
 
-  void restoreSession()
+  void restoreSession().then(() => updateBackgroundSyncState())
 
   const notifyRendererResize = (): void => {
     mainWindow?.webContents.send('window:resized')

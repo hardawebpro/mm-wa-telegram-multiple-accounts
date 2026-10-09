@@ -40,6 +40,7 @@ export interface IpcContext {
   settingsStore: SettingsStore
   uiStateStore: UiStateStore
   isDev: boolean
+  onMessagingSyncStateChange?: () => void
 }
 
 export function registerIpcHandlers(ctx: IpcContext): void {
@@ -125,6 +126,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
 
     const input = parsed as ReturnType<typeof accountSettingsSchema.parse>
     accountsStore.setSettings(input.accountId, input.settings)
+    ctx.onMessagingSyncStateChange?.()
     return success(undefined)
   })
 
@@ -148,6 +150,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     }
 
     viewManager.showView(accountId)
+    ctx.onMessagingSyncStateChange?.()
     return success(undefined)
   })
 

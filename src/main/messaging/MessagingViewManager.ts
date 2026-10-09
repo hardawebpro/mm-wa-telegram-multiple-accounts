@@ -199,6 +199,23 @@ export class MessagingViewManager {
     return this.shellVisible
   }
 
+  /** True when ≥2 views are attached and a non-active account needs notification sync. */
+  needsMultiAccountSync(notificationsEnabled: (accountId: string) => boolean): boolean {
+    const attachedAccountIds: string[] = []
+    for (const [id, view] of this.views) {
+      if (this.attachedViews.has(view)) {
+        attachedAccountIds.push(id)
+      }
+    }
+
+    if (attachedAccountIds.length < 2) {
+      return false
+    }
+
+    const activeId = this.activeAccountId
+    return attachedAccountIds.some((id) => id !== activeId && notificationsEnabled(id))
+  }
+
   setShellVisible(visible: boolean): void {
     if (this.shellVisible === visible) {
       return

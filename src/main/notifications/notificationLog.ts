@@ -16,6 +16,9 @@ export type NotificationLogEvent =
   | 'toast-shown'
   | 'toast-failed'
   | 'toast-skipped-read'
+  | 'sync-mode-multi'
+  | 'poll-title-fallback'
+  | 'toast-delay-ms'
 
 /** Never pass chat names, message text, or phone numbers here — the log is meant to be shareable. */
 export interface NotificationLogFields {

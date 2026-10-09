@@ -33,7 +33,9 @@ This is **not** an official WhatsApp, Meta, or Telegram product. It hosts the of
 - Sessions persist after restart
 - **Free and open source** (MIT) — beta release (`0.1.0-beta`)
 
-**Notifications:** Enable per account under **Settings → Accounts**. Toggle **Notification preview** for chat name and message text. Launch the app from the **Desktop or Start Menu shortcut** (not `npm run dev`) so Windows shows the proper app name on toasts.
+**Notifications:** Enable per account under **Settings → Accounts**. Toggle **Notification preview** for chat name and message text. Launch the app from the **Desktop or Start Menu shortcut** (not `npm run dev`) so Windows shows the proper app name on toasts. With several accounts open, **inactive tabs still sync** so toasts for other accounts arrive within a few seconds even when the window is maximized. **No toast** is shown for the account tab you are currently viewing and focused on (the unread badge still updates) — that is intentional.
+
+**Notification log (local):** `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` — no chat names or message text. Useful events: `poll-ok`, `poll-title-fallback`, `sync-mode-multi`, `toast-delay-ms`, `toast-shown`, `toast-skipped-read`.
 
 **Calls:** Enable or disable **Voice calls** and **Video calls** under **Settings → Accounts → Account Settings**. Also allow microphone/camera in Windows **Privacy & security** settings if prompted.
 
@@ -132,8 +134,9 @@ npm run typecheck
 | Blank screen after Add Account | WA Web still loading / overlay | Wait 30s; switch tabs; close Settings/Add Account modal |
 | QR code not showing | Network or WA server | Check internet; refresh; try Reload in account settings |
 | Lost login after restart | Cleared session or deleted partition data | Avoid "Clear session" unless logging out intentionally |
-| No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; turn off Windows Focus Assist; check **Settings → System → Notifications** for this app; in background (tray, minimized, or unfocused) toast usually within ~3–5s after message |
-| Toasts late or missing while in tray | Messaging page stopped answering checks | Send the log `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` with your bug report. It is local only and contains no chat names, message text, or phone numbers |
+| No notifications | App or Windows settings | Enable notifications in app Settings → Accounts; turn off Windows Focus Assist; check **Settings → System → Notifications** for this app; in background (tray, minimized, unfocused, or another account tab active) toast usually within ~3–5s after message |
+| Toast expected but none on active tab | By design | If that account’s tab is open and the window is focused, the app suppresses the toast (badge still updates); switch tab or minimize to tray to get toasts for that account |
+| Toasts late or missing while in tray | Messaging page stopped answering checks | Send the log `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` with your bug report. Look for repeated `poll-timeout` or missing `poll-ok`; `toast-delay-ms` shows detection-to-toast time. Log is local only and contains no chat names, message text, or phone numbers |
 | App already running / second launch does nothing | Single-instance lock | Only one process is allowed; use the existing window or tray icon, or end the old task in Task Manager before starting again |
 | Notification click does nothing | Launched from terminal, not shortcut | Quit app; launch from Desktop or Start Menu shortcut |
 | Toast header shows `com.jbs...` | Windows App ID not registered | Re-run `create-desktop-shortcut.bat` or `setup-first-time.bat`; launch from shortcut; log out/in Windows once if needed |
@@ -163,7 +166,9 @@ MIT — see [LICENSE](LICENSE).
 - Sesi tetap login setelah app ditutup
 - **Gratis dan open source** (MIT) — rilis beta (`0.1.0-beta`)
 
-**Notifikasi:** Aktifkan per akun di **Settings → Accounts**. Toggle **Notification preview** untuk nama chat dan teks pesan. Jalankan app dari **shortcut Desktop atau Start Menu** (bukan `npm run dev`) agar nama app benar di toast Windows.
+**Notifikasi:** Aktifkan per akun di **Settings → Accounts**. Toggle **Notification preview** untuk nama chat dan teks pesan. Jalankan app dari **shortcut Desktop atau Start Menu** (bukan `npm run dev`) agar nama app benar di toast Windows. Jika beberapa akun terbuka, **tab non-aktif tetap disinkronkan** agar toast akun lain muncul dalam beberapa detik meski jendela maximize. **Tidak ada toast** untuk tab akun yang sedang Anda lihat dan fokus (badge unread tetap naik) — itu perilaku desain.
+
+**Log notifikasi (lokal):** `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` — tanpa nama chat atau isi pesan. Event berguna: `poll-ok`, `poll-title-fallback`, `sync-mode-multi`, `toast-delay-ms`, `toast-shown`, `toast-skipped-read`.
 
 **Panggilan:** Aktifkan/nonaktifkan **Voice calls** dan **Video calls** di **Settings → Accounts → Account Settings**. Izinkan juga mikrofon/kamera di Windows **Privacy & security** jika diminta.
 
@@ -262,8 +267,9 @@ npm run typecheck
 | Layar blank setelah Add Account | WA Web masih load / overlay | Tunggu 30 detik; ganti tab; tutup modal Settings/Add Account |
 | QR tidak muncul | Jaringan / server WA | Cek internet; refresh; coba Reload di pengaturan akun |
 | Login hilang setelah restart | Session di-clear / data partition terhapus | Hindari "Clear session" kecuali logout sengaja |
-| Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; matikan Focus Assist; cek **Settings → System → Notifications** untuk app ini; saat background (tray, minimize, atau unfocus) toast biasanya ~3–5 detik setelah pesan |
-| Toast terlambat atau tidak muncul saat di tray | Halaman WA/TG berhenti merespons pengecekan | Lampirkan log `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log` saat melapor bug. Log hanya lokal dan tidak berisi nama chat, isi pesan, atau nomor HP |
+| Notifikasi tidak muncul | Setting app atau Windows | Aktifkan notifikasi di Settings → Accounts; matikan Focus Assist; cek **Settings → System → Notifications** untuk app ini; saat background (tray, minimize, unfocus, atau tab akun lain aktif) toast biasanya ~3–5 detik setelah pesan |
+| Toast diharapkan tapi tidak muncul di tab aktif | By design | Jika tab akun itu terbuka dan jendela fokus, app menekan toast (badge tetap naik); ganti tab atau minimize ke tray untuk toast akun tersebut |
+| Toast terlambat atau tidak muncul saat di tray | Halaman WA/TG berhenti merespons pengecekan | Lampirkan log `%APPDATA%\mm-wa-telegram-multiple-accounts\logs\notifications.log`. Cari `poll-timeout` berulang atau tidak ada `poll-ok`; `toast-delay-ms` menunjukkan waktu deteksi sampai toast. Log lokal, tanpa nama chat, isi pesan, atau nomor HP |
 | App sudah jalan / buka kedua tidak muncul | Single-instance lock | Hanya satu proses; pakai jendela atau icon tray yang ada, atau end task di Task Manager sebelum start lagi |
 | Klik notifikasi tidak buka app | Launch dari terminal | Quit app; jalankan dari shortcut Desktop atau Start Menu |
 | Header toast masih `com.jbs...` | App ID Windows belum terdaftar | Jalankan ulang `create-desktop-shortcut.bat` atau `setup-first-time.bat`; buka lewat shortcut; logout/login Windows sekali jika perlu |

@@ -11,6 +11,7 @@ import {
   isGenericMessagingTitle,
   pollLatestUnreadChatWithRetry,
   pollUnreadCount,
+  parseUnreadCountFromTitle,
   pollUnreadSnapshot,
   type UnreadSnapshot
 } from './unreadMonitor'
@@ -41,10 +42,12 @@ const TITLE_REFRESH_DEBOUNCE_MS = 500
 const NOTIFICATION_DEBOUNCE_MS = 800
 const BACKGROUND_NOTIFICATION_DEBOUNCE_MS = 1200
 const STALE_GAP_MS = 120_000
-const CATCH_UP_DEBOUNCE_MS = 8000
+const CATCH_UP_DEBOUNCE_MS = 4000
 const NOTIFICATION_RATE_LIMIT_MS = 30_000
 const POLL_ACCOUNT_TIMEOUT_MS = 3000
-const PRE_SHOW_RECHECK_TIMEOUT_MS = 1500
+const POLL_INACTIVE_ACCOUNT_TIMEOUT_MS = 5000
+const PRE_SHOW_RECHECK_TIMEOUT_MS = 800
+const PRE_SHOW_WORK_CAP_MS = 800
 const STALE_TIMEOUT_STREAK = 3
 const BACKGROUND_PREVIEW_POLL_MAX_WAIT_MS = 1000
 const FOREGROUND_PREVIEW_POLL_MAX_WAIT_MS = 1500
@@ -83,8 +86,9 @@ export class NotificationService {
   /** Keep references alive until click/close — otherwise Windows may GC before the user clicks. */
   private readonly liveNotifications = new Set<Notification>()
   private readonly notificationTargets = new Map<Notification, NotificationTarget>()
-  private pollTimer: ReturnType<typeof setInterval> | null = null
+  private readonly accountPollTimers = new Map<string, ReturnType<typeof setInterval>>()
   private pollIntervalMs = POLL_INTERVAL_MS
+  private pollStaggerSeed = 0
   /** True when window hidden, minimized, or unfocused — faster poll + all-view sync in ViewManager. */
   private backgroundSync = false
   private loggedUnsupportedNotifications = false
@@ -107,7 +111,8 @@ export class NotificationService {
       this.pendingNotifyTitle.set(accountId, title)
       this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
       logNotificationEvent('title-updated', { accountId, platform })
-      if (this.backgroundSync) {
+      const notificationsOn = this.deps.accountsStore.getSettings(accountId).notificationsEnabled
+      if (notificationsOn) {
         void this.pollAccountWithTimeout(accountId).then(() => {
           this.processPendingNotifications([accountId])
         })
@@ -116,7 +121,10 @@ export class NotificationService {
       this.scheduleTitleRefresh(accountId)
     })
 
-    void this.pollAccountWithTimeout(accountId)
+    this.scheduleAccountPolling(accountId)
+    void this.pollAccountWithTimeout(accountId).then(() => {
+      this.processPendingNotifications([accountId])
+    })
   }
 
   detachFromView(accountId: string, view: WebContentsView): void {
@@ -144,9 +152,8 @@ export class NotificationService {
   }
 
   dispose(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer)
-      this.pollTimer = null
+    for (const accountId of [...this.accountPollTimers.keys()]) {
+      this.clearAccountPollTimer(accountId)
     }
 
     for (const accountId of this.trackedViews.keys()) {
@@ -210,6 +217,8 @@ export class NotificationService {
   }
 
   private clearAccountTimers(accountId: string): void {
+    this.clearAccountPollTimer(accountId)
+
     const titleTimer = this.titleRefreshTimers.get(accountId)
     if (titleTimer) {
       clearTimeout(titleTimer)
@@ -218,6 +227,55 @@ export class NotificationService {
 
     this.clearPendingNotifyTimer(accountId)
     this.pendingNotifySince.delete(accountId)
+  }
+
+  private clearAccountPollTimer(accountId: string): void {
+    const pollTimer = this.accountPollTimers.get(accountId)
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      this.accountPollTimers.delete(accountId)
+    }
+  }
+
+  private scheduleAccountPolling(accountId: string): void {
+    this.clearAccountPollTimer(accountId)
+
+    const staggerMs = (this.pollStaggerSeed++ % 5) * 80
+    setTimeout(() => {
+      if (!this.trackedViews.has(accountId)) {
+        return
+      }
+
+      this.accountPollTimers.set(
+        accountId,
+        setInterval(() => {
+          void this.pollAccountWithTimeout(accountId).then(() => {
+            this.processPendingNotifications([accountId])
+          })
+        }, this.pollIntervalMs)
+      )
+    }, staggerMs)
+  }
+
+  private getPollAccountTimeoutMs(accountId: string): number {
+    const viewManager = this.deps.getViewManager()
+    const activeAccountId = viewManager?.getActiveAccountId() ?? null
+    const shellVisible = viewManager?.isShellVisible() ?? true
+    if (shellVisible && activeAccountId === accountId) {
+      return POLL_ACCOUNT_TIMEOUT_MS
+    }
+    return POLL_INACTIVE_ACCOUNT_TIMEOUT_MS
+  }
+
+  private shouldTreatAsCatchUp(accountId: string): boolean {
+    const lastSuccess = this.lastSuccessfulPollAt.get(accountId) ?? 0
+    const gap = Date.now() - lastSuccess
+    const streak = this.pollTimeoutStreak.get(accountId) ?? 0
+    return (
+      this.staleAccounts.has(accountId) ||
+      streak >= STALE_TIMEOUT_STREAK ||
+      gap > STALE_GAP_MS
+    )
   }
 
   private clearPendingNotifyTimer(accountId: string): void {
@@ -246,29 +304,27 @@ export class NotificationService {
   }
 
   private setPollInterval(intervalMs: number): void {
-    if (this.pollIntervalMs === intervalMs && this.pollTimer) {
+    if (this.pollIntervalMs === intervalMs && this.accountPollTimers.size > 0) {
       return
     }
 
     this.pollIntervalMs = intervalMs
 
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer)
+    for (const accountId of this.trackedViews.keys()) {
+      this.scheduleAccountPolling(accountId)
     }
-
-    this.pollTimer = setInterval(() => {
-      void this.pollAllViews()
-    }, this.pollIntervalMs)
   }
 
   private startPolling(): void {
-    this.setPollInterval(POLL_INTERVAL_MS)
+    this.pollIntervalMs = POLL_INTERVAL_MS
   }
 
-  private async pollAllViews(): Promise<void> {
-    const accountIds = [...this.trackedViews.keys()]
-    await Promise.all(accountIds.map((accountId) => this.pollAccountWithTimeout(accountId)))
-    this.processPendingNotifications()
+  private pollAllViews(): void {
+    for (const accountId of this.trackedViews.keys()) {
+      void this.pollAccountWithTimeout(accountId).then(() => {
+        this.processPendingNotifications([accountId])
+      })
+    }
   }
 
   private processPendingNotifications(accountIds?: string[]): void {
@@ -298,16 +354,18 @@ export class NotificationService {
     const startedAt = Date.now()
     const refresh = this.refreshAccountUnread(accountId).catch(() => null)
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+    const timeoutMs = this.getPollAccountTimeoutMs(accountId)
     const outcome = await Promise.race([
       refresh,
       new Promise<'timeout'>((resolve) => {
-        timeoutHandle = setTimeout(() => resolve('timeout'), POLL_ACCOUNT_TIMEOUT_MS)
+        timeoutHandle = setTimeout(() => resolve('timeout'), timeoutMs)
       })
     ])
     clearTimeout(timeoutHandle)
 
     if (outcome === 'timeout') {
       this.handlePollTimeout(accountId, tracked)
+      this.tryTitleFallbackAfterPollTimeout(accountId, tracked)
       void refresh.then((late) => {
         if (late) {
           logNotificationEvent('poll-late-discarded', {
@@ -334,7 +392,7 @@ export class NotificationService {
 
     this.pendingNotifyTitle.set(accountId, outcome.title)
     this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(outcome.title))
-    this.syncUnread(accountId, outcome.unreadCount, outcome.title, recovering)
+    this.syncUnread(accountId, outcome.unreadCount, outcome.title)
   }
 
   private handlePollTimeout(accountId: string, tracked: TrackedView): void {
@@ -351,6 +409,32 @@ export class NotificationService {
     if (!tracked.view.webContents.isDestroyed()) {
       tracked.view.webContents.setBackgroundThrottling(false)
     }
+  }
+
+  private tryTitleFallbackAfterPollTimeout(accountId: string, tracked: TrackedView): void {
+    if (tracked.view.webContents.isDestroyed()) {
+      return
+    }
+
+    const title = tracked.view.webContents.getTitle()
+    const normalizedCount = Math.max(0, Math.floor(parseUnreadCountFromTitle(title)))
+    const previousCount = this.polledUnreadByAccount.get(accountId) ?? 0
+    const baseline = this.notificationBaselineByAccount.get(accountId) ?? 0
+
+    if (normalizedCount <= previousCount && normalizedCount <= baseline) {
+      return
+    }
+
+    logNotificationEvent('poll-title-fallback', {
+      accountId,
+      platform: tracked.platform,
+      unreadCount: normalizedCount
+    })
+
+    this.pendingNotifyTitle.set(accountId, title)
+    this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
+    this.syncUnread(accountId, normalizedCount, title)
+    this.processPendingNotifications([accountId])
   }
 
   private logPollOk(
@@ -416,7 +500,7 @@ export class NotificationService {
     this.catchUpAccounts.delete(accountId)
   }
 
-  private syncUnread(accountId: string, unreadCount: number, title?: string, recovering = false): void {
+  private syncUnread(accountId: string, unreadCount: number, title?: string): void {
     const normalizedCount = this.updatePolledCount(accountId, unreadCount)
     const baseline = this.notificationBaselineByAccount.get(accountId) ?? 0
 
@@ -451,7 +535,7 @@ export class NotificationService {
       this.pendingNotifyChatLabel.set(accountId, extractPreviewFromTitle(title))
     }
 
-    if (recovering && !this.catchUpAccounts.has(accountId)) {
+    if (this.shouldTreatAsCatchUp(accountId) && !this.catchUpAccounts.has(accountId)) {
       this.catchUpAccounts.add(accountId)
       logNotificationEvent('catch-up', {
         accountId,
@@ -582,7 +666,14 @@ export class NotificationService {
     }
 
     const isCatchUp = this.catchUpAccounts.has(accountId)
-    const freshCount = await this.recheckUnreadCount(accountId)
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+    const freshCount = await Promise.race([
+      this.recheckUnreadCount(accountId),
+      new Promise<null>((resolve) => {
+        timeoutHandle = setTimeout(() => resolve(null), PRE_SHOW_WORK_CAP_MS)
+      })
+    ])
+    clearTimeout(timeoutHandle)
 
     if (freshCount === null && isCatchUp) {
       // Backlog toasts are only shown once the page confirms the messages are still unread.
@@ -605,35 +696,21 @@ export class NotificationService {
     }
 
     const newMessages = normalizedCount - baseline
-    const shouldPollPreview = settings.notificationPreviewEnabled && !isCatchUp
-
-    const viewManager = this.deps.getViewManager()
-    viewManager?.ensureViewAttached(accountId)
-    const tracked = this.trackedViews.get(accountId)
-    const latestChat =
-      shouldPollPreview && tracked && !tracked.view.webContents.isDestroyed()
-        ? await pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform, {
-            maxAttempts: 4,
-            backgroundMode: this.backgroundSync,
-            maxWaitMs: this.backgroundSync
-              ? BACKGROUND_PREVIEW_POLL_MAX_WAIT_MS
-              : FOREGROUND_PREVIEW_POLL_MAX_WAIT_MS
-          })
-        : null
-
     const titleFromPage = this.pendingNotifyTitle.get(accountId)
     const rawChatLabel =
-      latestChat?.chatName ??
-      this.pendingNotifyChatLabel.get(accountId) ??
-      extractPreviewFromTitle(titleFromPage ?? '')
+      this.pendingNotifyChatLabel.get(accountId) ?? extractPreviewFromTitle(titleFromPage ?? '')
     const chatLabel = isGenericMessagingTitle(rawChatLabel) ? null : rawChatLabel
 
-    const messagePreview = settings.notificationPreviewEnabled
-      ? (latestChat?.messagePreview ?? null)
-      : null
-
     this.pendingNotifyChatLabel.set(accountId, chatLabel)
-    this.pendingNotifyMessagePreview.set(accountId, messagePreview)
+
+    const pendingSince = this.pendingNotifySince.get(accountId)
+    if (pendingSince !== undefined) {
+      logNotificationEvent('toast-delay-ms', {
+        accountId,
+        platform: account.platform,
+        latencyMs: Date.now() - pendingSince
+      })
+    }
 
     const shown = this.showNotification(
       account.name,
@@ -643,7 +720,7 @@ export class NotificationService {
       settings.soundEnabled,
       settings.notificationPreviewEnabled,
       chatLabel,
-      messagePreview,
+      null,
       isCatchUp,
       () => {
         logNotificationEvent('toast-failed', { accountId, platform: account.platform })
@@ -663,6 +740,29 @@ export class NotificationService {
         platform: account.platform,
         unreadCount: normalizedCount,
         detail: isCatchUp ? 'catch-up-summary' : undefined
+      })
+    }
+
+    const shouldPollPreview = settings.notificationPreviewEnabled && !isCatchUp
+    const tracked = this.trackedViews.get(accountId)
+    if (shouldPollPreview && tracked && !tracked.view.webContents.isDestroyed()) {
+      void pollLatestUnreadChatWithRetry(tracked.view.webContents, tracked.platform, {
+        maxAttempts: 4,
+        backgroundMode: this.backgroundSync,
+        maxWaitMs: this.backgroundSync
+          ? BACKGROUND_PREVIEW_POLL_MAX_WAIT_MS
+          : FOREGROUND_PREVIEW_POLL_MAX_WAIT_MS
+      }).then((latestChat) => {
+        if (!latestChat) {
+          return
+        }
+        const previewLabel = isGenericMessagingTitle(latestChat.chatName) ? null : latestChat.chatName
+        if (previewLabel) {
+          this.pendingNotifyChatLabel.set(accountId, previewLabel)
+        }
+        if (latestChat.messagePreview) {
+          this.pendingNotifyMessagePreview.set(accountId, latestChat.messagePreview)
+        }
       })
     }
   }
