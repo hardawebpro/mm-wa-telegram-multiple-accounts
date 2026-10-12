@@ -127,7 +127,7 @@ export default function App(): JSX.Element {
             />
           ) : (
             <>
-              <div ref={contentRef} className="absolute inset-0" />
+              <div ref={contentRef} data-messaging-surface className="absolute inset-0" />
               {uiState.openedAccountIds.length === 0 && (
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                   <p className="text-lg font-medium text-ink">No account open</p>

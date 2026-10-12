@@ -159,17 +159,58 @@ function createWindow(): void {
 
   void restoreSession().then(() => updateBackgroundSyncState())
 
-  const notifyRendererResize = (): void => {
-    mainWindow?.webContents.send('window:resized')
-    setTimeout(() => mainWindow?.webContents.send('window:resized'), 50)
-    setTimeout(() => mainWindow?.webContents.send('window:resized'), 150)
+  let syncBoundsTimer: ReturnType<typeof setTimeout> | null = null
+
+  const syncBoundsFromShellAndReflow = (): void => {
+    void viewManager?.syncBoundsFromShell().then((updated) => {
+      if (updated) {
+        viewManager?.reapplyContentBounds()
+      }
+    })
   }
 
-  mainWindow.on('resize', notifyRendererResize)
-  mainWindow.on('maximize', notifyRendererResize)
-  mainWindow.on('unmaximize', notifyRendererResize)
-  mainWindow.on('enter-full-screen', notifyRendererResize)
-  mainWindow.on('leave-full-screen', notifyRendererResize)
+  const scheduleDebouncedSyncBoundsFromShell = (): void => {
+    if (syncBoundsTimer) {
+      clearTimeout(syncBoundsTimer)
+    }
+    syncBoundsTimer = setTimeout(() => {
+      syncBoundsTimer = null
+      syncBoundsFromShellAndReflow()
+    }, 250)
+  }
+
+  const scheduleStaggeredSyncBoundsFromShell = (): void => {
+    for (const delayMs of [0, 100, 300, 500, 800]) {
+      if (delayMs === 0) {
+        syncBoundsFromShellAndReflow()
+      } else {
+        setTimeout(() => syncBoundsFromShellAndReflow(), delayMs)
+      }
+    }
+  }
+
+  const pingRendererResize = (extendedDelays: boolean): void => {
+    const delays = extendedDelays ? [0, 50, 150, 300, 500, 800] : [0, 50, 150]
+    for (const delayMs of delays) {
+      if (delayMs === 0) {
+        mainWindow?.webContents.send('window:resized')
+      } else {
+        setTimeout(() => mainWindow?.webContents.send('window:resized'), delayMs)
+      }
+    }
+    if (extendedDelays) {
+      scheduleStaggeredSyncBoundsFromShell()
+    } else {
+      scheduleDebouncedSyncBoundsFromShell()
+    }
+  }
+
+  mainWindow.on('resize', () => pingRendererResize(false))
+  mainWindow.on('maximize', () => pingRendererResize(true))
+  mainWindow.on('unmaximize', () => pingRendererResize(true))
+  mainWindow.on('enter-full-screen', () => pingRendererResize(true))
+  mainWindow.on('leave-full-screen', () => pingRendererResize(true))
+  mainWindow.on('restore', () => pingRendererResize(true))
 
   trayManager = new TrayManager(() => mainWindow, () => settingsStore.get(), {
     onShellHidden: () => updateBackgroundSyncState(),
@@ -181,7 +222,7 @@ function createWindow(): void {
   mainWindow.on('hide', updateBackgroundSyncState)
   mainWindow.on('show', updateBackgroundSyncState)
   mainWindow.on('minimize', updateBackgroundSyncState)
-  mainWindow.on('restore', updateBackgroundSyncState)
+  mainWindow.on('restore', updateBackgroundSyncState) // also pingRendererResize above
   mainWindow.on('blur', updateBackgroundSyncState)
   mainWindow.on('focus', updateBackgroundSyncState)
 

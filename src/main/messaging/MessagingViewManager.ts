@@ -3,6 +3,7 @@ import { ALLOWED_PLATFORM_ORIGINS, getPlatformUrl } from '@shared/constants/plat
 import { MESSAGING_USER_AGENT } from '@shared/constants/messaging'
 import { BLOCK_WEB_NOTIFICATIONS_SCRIPT } from '../notifications/blockWebNotifications'
 import type { MessagingAccount, Platform, ViewBounds } from '@shared/types'
+import { readShellMessagingBounds } from './readShellMessagingBounds'
 
 const MESSAGING_WEB_PREFERENCES = {
   nodeIntegration: false,
@@ -14,9 +15,12 @@ const MESSAGING_WEB_PREFERENCES = {
 
 const HIDDEN_BOUNDS: ViewBounds = { x: 0, y: 0, width: 0, height: 0 }
 
+const MESSAGING_RESIZE_EVENT_SCRIPT = `window.dispatchEvent(new Event('resize'))`
+
 export class MessagingViewManager {
   private readonly views = new Map<string, WebContentsView>()
   private readonly attachedViews = new Set<WebContentsView>()
+  private readonly lastAppliedBounds = new WeakMap<WebContentsView, ViewBounds>()
   private activeAccountId: string | null = null
   private contentBounds: ViewBounds = { x: 0, y: 0, width: 0, height: 0 }
   private overlayActive = false
@@ -181,10 +185,36 @@ export class MessagingViewManager {
       return
     }
 
-    const effectiveBounds = this.getEffectiveBounds()
-    for (const view of this.attachedViews) {
-      view.setBounds(effectiveBounds)
+    this.applyBoundsToAttachedViews(this.getEffectiveBounds(), false)
+  }
+
+  /** Re-applies cached content bounds so WA/TG reflow after OS window transitions. */
+  reapplyContentBounds(): void {
+    if (this.overlayActive) {
+      return
     }
+
+    this.applyBoundsToAttachedViews(this.getEffectiveBounds(), true)
+  }
+
+  /** Reads the shell DOM placeholder rect and resizes attached messaging views. */
+  async syncBoundsFromShell(): Promise<boolean> {
+    if (this.overlayActive) {
+      return false
+    }
+
+    const mainWindow = this.getMainWindow()
+    if (!mainWindow) {
+      return false
+    }
+
+    const bounds = await readShellMessagingBounds(mainWindow)
+    if (!bounds) {
+      return false
+    }
+
+    this.resizeActiveView(bounds)
+    return true
   }
 
   hasView(accountId: string): boolean {
@@ -249,7 +279,7 @@ export class MessagingViewManager {
       }
 
       const isActive = id === this.activeAccountId
-      view.setBounds(bounds)
+      this.applyBoundsToView(view, bounds)
       view.setVisible(this.shellVisible ? isActive : true)
     }
 
@@ -296,7 +326,7 @@ export class MessagingViewManager {
 
     mainWindow.contentView.addChildView(view)
     this.attachedViews.add(view)
-    view.setBounds(this.getEffectiveBounds())
+    this.applyBoundsToView(view, this.getEffectiveBounds())
   }
 
   private detachView(view: WebContentsView): void {
@@ -339,8 +369,30 @@ export class MessagingViewManager {
       // View was not attached yet.
     }
     mainWindow.contentView.addChildView(view)
-    view.setBounds(this.getEffectiveBounds())
+    this.applyBoundsToView(view, this.getEffectiveBounds())
     view.setVisible(true)
+  }
+
+  private applyBoundsToAttachedViews(bounds: ViewBounds, forceReflow: boolean): void {
+    for (const view of this.attachedViews) {
+      this.applyBoundsToView(view, bounds, forceReflow)
+    }
+  }
+
+  private applyBoundsToView(view: WebContentsView, bounds: ViewBounds, forceReflow = false): void {
+    const previous = this.lastAppliedBounds.get(view)
+    view.setBounds(bounds)
+    this.lastAppliedBounds.set(view, bounds)
+
+    const sizeChanged =
+      !previous || previous.width !== bounds.width || previous.height !== bounds.height
+    if ((!sizeChanged && !forceReflow) || view.webContents.isDestroyed()) {
+      return
+    }
+
+    void view.webContents.executeJavaScript(MESSAGING_RESIZE_EVENT_SCRIPT, true).catch(() => {
+      // Ignore failures on transient blank pages.
+    })
   }
 
   private getEffectiveBounds(): ViewBounds {
